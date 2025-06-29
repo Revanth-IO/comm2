@@ -46,14 +46,12 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
           await loadGoogleScript();
         }
 
-        // Initialize Google Identity Services with redirect mode instead of popup
+        // Initialize Google Identity Services - no popup mode
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleCredentialResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
-          ux_mode: 'redirect',
-          redirect_uri: window.location.origin
         });
 
         // Check if user is already signed in
@@ -62,15 +60,6 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
           setIsSignedIn(true);
-        }
-
-        // Check for credential in URL (after redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const credential = urlParams.get('credential');
-        if (credential) {
-          handleCredentialResponse({ credential });
-          // Clean up URL
-          window.history.replaceState({}, document.title, window.location.pathname);
         }
       } catch (error) {
         console.error('Failed to initialize Google Auth:', error);
@@ -117,8 +106,10 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
       setUser(googleUser);
       setIsSignedIn(true);
       localStorage.setItem('googleUser', JSON.stringify(googleUser));
+      setIsLoading(false);
     } catch (error) {
       console.error('Failed to process Google credential:', error);
+      setIsLoading(false);
     }
   };
 
@@ -135,63 +126,113 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         await loadGoogleScript();
       }
 
-      // Use the One Tap prompt which is more reliable
-      window.google.accounts.id.prompt((notification: any) => {
-        console.log('Prompt notification:', notification);
-        setIsLoading(false);
-        
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If One Tap doesn't work, fall back to button rendering
-          console.log('One Tap not available, using button approach');
-          renderSignInButton();
+      // Create a modal overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'google-signin-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      // Create modal content
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        position: relative;
+      `;
+
+      // Add title
+      const title = document.createElement('h3');
+      title.textContent = 'Sign in with Google';
+      title.style.cssText = `
+        margin: 0 0 20px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+      `;
+
+      // Add close button
+      const closeButton = document.createElement('button');
+      closeButton.innerHTML = '×';
+      closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        border: none;
+        background: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      const cleanup = () => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
         }
+        setIsLoading(false);
+      };
+
+      closeButton.onclick = cleanup;
+      overlay.onclick = (e) => {
+        if (e.target === overlay) cleanup();
+      };
+
+      // Create container for Google button
+      const buttonContainer = document.createElement('div');
+      buttonContainer.id = 'google-button-container';
+
+      modal.appendChild(closeButton);
+      modal.appendChild(title);
+      modal.appendChild(buttonContainer);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      // Render Google Sign-In button
+      window.google.accounts.id.renderButton(buttonContainer, {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
+        width: 300,
+        text: 'signin_with',
+        shape: 'rectangular'
       });
+
+      // Override the callback to handle cleanup
+      const originalCallback = window.google.accounts.id.initialize;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: any) => {
+          cleanup();
+          handleCredentialResponse(response);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: false,
+      });
+
     } catch (error) {
       console.error('Google Sign-In failed:', error);
       setIsLoading(false);
     }
-  };
-
-  const renderSignInButton = () => {
-    // Create a temporary container for the Google button
-    const buttonContainer = document.createElement('div');
-    buttonContainer.id = 'google-signin-button';
-    buttonContainer.style.position = 'fixed';
-    buttonContainer.style.top = '50%';
-    buttonContainer.style.left = '50%';
-    buttonContainer.style.transform = 'translate(-50%, -50%)';
-    buttonContainer.style.zIndex = '10000';
-    buttonContainer.style.backgroundColor = 'white';
-    buttonContainer.style.padding = '20px';
-    buttonContainer.style.borderRadius = '10px';
-    buttonContainer.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
-    
-    // Add close button
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '×';
-    closeButton.style.position = 'absolute';
-    closeButton.style.top = '5px';
-    closeButton.style.right = '10px';
-    closeButton.style.border = 'none';
-    closeButton.style.background = 'none';
-    closeButton.style.fontSize = '20px';
-    closeButton.style.cursor = 'pointer';
-    closeButton.onclick = () => {
-      document.body.removeChild(buttonContainer);
-      setIsLoading(false);
-    };
-    
-    buttonContainer.appendChild(closeButton);
-    document.body.appendChild(buttonContainer);
-
-    // Render the Google Sign-In button
-    window.google.accounts.id.renderButton(buttonContainer, {
-      theme: 'outline',
-      size: 'large',
-      type: 'standard',
-      width: 250,
-      text: 'signin_with'
-    });
   };
 
   const signOut = () => {
