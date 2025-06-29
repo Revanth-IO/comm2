@@ -37,7 +37,7 @@ const Footer = () => {
                 <span className="text-white font-bold text-lg">उ</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Upkar</h3>
+                <h3 className="text-xl font-bold text-white">Upkaar</h3>
                 <p className="text-sm text-gray-400">Tri-State Community</p>
               </div>
             </div>
@@ -101,8 +101,8 @@ const Footer = () => {
               <div className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-gray-300">info@upkar.org</p>
-                  <p className="text-gray-300">support@upkar.org</p>
+                  <p className="text-gray-300">info@upkaar.org</p>
+                  <p className="text-gray-300">support@upkaar.org</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -152,7 +152,7 @@ const Footer = () => {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2022 Upkar Tri-State Community. All rights reserved.
+              © 2022 Upkaar Tri-State Community. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">

@@ -1,8 +1,8 @@
 {
-  "name": "upkar-community-website",
+  "name": "upkaar-community-website",
   "private": true,
   "version": "1.0.0",
-  "description": "Upkar - Indian diaspora community website for tri-state area",
+  "description": "Upkaar - Indian diaspora community website for tri-state area",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -47,11 +47,11 @@
     "business-directory",
     "classifieds"
   ],
-  "author": "Upkar Community",
+  "author": "Upkaar Community",
   "license": "MIT",
-  "homepage": "https://upkar.org",
+  "homepage": "https://upkaar.org",
   "repository": {
     "type": "git",
-    "url": "https://github.com/upkar-org/website"
+    "url": "https://github.com/upkaar-org/website"
   }
 }

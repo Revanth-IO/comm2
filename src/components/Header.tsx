@@ -24,7 +24,7 @@ const Header = () => {
               <span className="text-white font-bold text-lg">उ</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Upkar</h1>
+              <h1 className="text-xl font-bold text-gray-900">Upkaar</h1>
               <p className="text-xs text-gray-600">Tri-State Community</p>
             </div>
           </div>

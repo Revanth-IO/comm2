@@ -50,7 +50,7 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
               <h2 className="text-xl font-bold text-gray-900">
                 {isLogin ? 'Sign In' : 'Create Account'}
               </h2>
-              <p className="text-sm text-gray-600">Join the Upkar community</p>
+              <p className="text-sm text-gray-600">Join the Upkaar community</p>
             </div>
           </div>
           <button
