@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
-    "caniuse-lite": "^1.0.30001726",
     "google-auth-library": "^9.4.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.344.0",
