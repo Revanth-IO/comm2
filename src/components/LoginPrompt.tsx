@@ -141,7 +141,7 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h4>
             <div className="space-y-1 text-xs text-gray-600">
-              <p><strong>Admin:</strong> admin@upkar.com</p>
+              <p><strong>Admin:</strong> admin@upkar.org</p>
               <p><strong>User:</strong> user@example.com</p>
               <p className="text-gray-500">Password: any text (demo mode)</p>
             </div>
