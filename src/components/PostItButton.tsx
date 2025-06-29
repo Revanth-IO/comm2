@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { Plus, PenTool } from 'lucide-react';
 import CreateClassifiedModal from './CreateClassifiedModal';
-import { useAuth } from '../hooks/useAuth';
 
 const PostItButton: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { hasPermission } = useAuth();
-
-  const canCreateClassified = hasPermission('add_classified');
 
   return (
     <>

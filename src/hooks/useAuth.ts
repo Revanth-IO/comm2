@@ -70,7 +70,9 @@ export const useAuth = (): UseAuthReturn => {
   };
 
   const hasPermission = (permission: string): boolean => {
-    if (!user) return permission === 'read_content'; // Guests can only read
+    // Allow guest users to post classifieds
+    if (!user && permission === 'add_classified') return true;
+    if (!user) return permission === 'read_content'; // Guests can only read other content
 
     const { USER_PERMISSIONS } = require('../types');
     const userPermissions = USER_PERMISSIONS[user.role];

@@ -85,8 +85,9 @@ export interface Category {
   color: string;
 }
 
+// Updated permissions to allow guest posting
 export const USER_PERMISSIONS = {
-  guest: ['read_content'],
+  guest: ['read_content', 'add_classified'], // Guests can now post classifieds
   user: ['read_content', 'add_classified'],
   vendor: ['read_content', 'add_classified', 'add_event', 'add_business'],
   content_manager: ['read_content', 'add_classified', 'add_event', 'add_business', 'approve_content'],

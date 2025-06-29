@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { X, Upload, MapPin, DollarSign, Tag, User, Mail, Phone, Camera } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import LoginPrompt from './LoginPrompt';
 
 interface CreateClassifiedModalProps {
   isOpen: boolean;
@@ -9,8 +7,6 @@ interface CreateClassifiedModalProps {
 }
 
 const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, onClose }) => {
-  const { user, hasPermission } = useAuth();
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -67,21 +63,12 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
-
-    if (!hasPermission('add_classified')) {
-      alert('You do not have permission to create classified ads. Please contact an administrator.');
-      return;
-    }
-
+    // Allow anyone to submit - no authentication required
     // In a real app, this would send data to your backend
     console.log('Classified ad submitted:', {
       ...formData,
-      authorId: user.id,
-      authorName: user.name,
+      authorId: 'guest_' + Date.now(),
+      authorName: formData.contactName,
       status: 'pending',
       createdAt: new Date().toISOString()
     });
@@ -108,19 +95,6 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
   };
 
   if (!isOpen) return null;
-
-  if (showLoginPrompt) {
-    return (
-      <LoginPrompt 
-        isOpen={true}
-        onClose={() => {
-          setShowLoginPrompt(false);
-          onClose();
-        }}
-        message="Please sign in to post a classified ad"
-      />
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -405,6 +379,13 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
                   <li>• You'll receive email notification when approved</li>
                   <li>• Ads that violate community guidelines will be rejected</li>
                 </ul>
+              </div>
+
+              <div className="bg-green-50 rounded-lg p-4">
+                <h4 className="font-medium text-green-900 mb-2">✅ No Account Required</h4>
+                <p className="text-sm text-green-800">
+                  You can post classified ads without creating an account. Just provide your contact information and we'll handle the rest!
+                </p>
               </div>
 
               <div className="flex space-x-4">
