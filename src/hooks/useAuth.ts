@@ -14,7 +14,7 @@ interface UseAuthReturn {
 const MOCK_USERS: User[] = [
   {
     id: '1',
-    email: 'admin@indiaconnect.com',
+    email: 'admin@upkar.com',
     name: 'Admin User',
     role: 'admin',
     isActive: true,

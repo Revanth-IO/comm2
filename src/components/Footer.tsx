@@ -34,15 +34,15 @@ const Footer = () => {
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-6">
               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">IN</span>
+                <span className="text-white font-bold text-lg">उ</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">IndiaConnect</h3>
+                <h3 className="text-xl font-bold text-white">Upkar</h3>
                 <p className="text-sm text-gray-400">Tri-State Community</p>
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Connecting and empowering the Indian diaspora across Pennsylvania, New Jersey, and New York through community, culture, and commerce.
+              Connecting and empowering the Indian diaspora across Pennsylvania, New Jersey, and New York through community, culture, and kindness.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">
@@ -101,8 +101,8 @@ const Footer = () => {
               <div className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-gray-300">info@indiaconnect.com</p>
-                  <p className="text-gray-300">support@indiaconnect.com</p>
+                  <p className="text-gray-300">info@upkar.com</p>
+                  <p className="text-gray-300">support@upkar.com</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -152,7 +152,7 @@ const Footer = () => {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2024 IndiaConnect Tri-State Community. All rights reserved.
+              © 2024 Upkar Tri-State Community. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">
