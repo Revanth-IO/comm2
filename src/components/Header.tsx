@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Calendar, Building, Newspaper, Users } from 'lucide-react';
+import { Menu, X, Home, Calendar, Building, Newspaper, Users, Tag } from 'lucide-react';
+import UserMenu from './UserMenu';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -8,6 +9,7 @@ const Header = () => {
     { name: 'Home', href: '#home', icon: Home },
     { name: 'Events', href: '#events', icon: Calendar },
     { name: 'Business', href: '#business', icon: Building },
+    { name: 'Classifieds', href: '#classifieds', icon: Tag },
     { name: 'News', href: '#news', icon: Newspaper },
     { name: 'Community', href: '#community', icon: Users },
   ];
@@ -41,13 +43,17 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-md text-gray-700 hover:text-orange-600 hover:bg-gray-100 transition-colors duration-200"
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* User Menu and Mobile menu button */}
+          <div className="flex items-center space-x-4">
+            <UserMenu />
+            
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2 rounded-md text-gray-700 hover:text-orange-600 hover:bg-gray-100 transition-colors duration-200"
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}

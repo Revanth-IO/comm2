@@ -3,10 +3,12 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import FeaturedEvents from './components/FeaturedEvents';
 import BusinessDirectory from './components/BusinessDirectory';
+import ClassifiedsSection from './components/ClassifiedsSection';
 import NewsSection from './components/NewsSection';
 import ServicesSection from './components/ServicesSection';
 import CommunityHighlights from './components/CommunityHighlights';
 import Footer from './components/Footer';
+import PostItButton from './components/PostItButton';
 
 function App() {
   return (
@@ -15,10 +17,12 @@ function App() {
       <Hero />
       <FeaturedEvents />
       <BusinessDirectory />
+      <ClassifiedsSection />
       <NewsSection />
       <ServicesSection />
       <CommunityHighlights />
       <Footer />
+      <PostItButton />
     </div>
   );
 }
