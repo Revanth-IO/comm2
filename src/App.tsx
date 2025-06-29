@@ -10,6 +10,7 @@ import ServicesSection from './components/ServicesSection';
 import CommunityHighlights from './components/CommunityHighlights';
 import Footer from './components/Footer';
 import PostItButton from './components/PostItButton';
+import FeedbackButton from './components/FeedbackButton';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <CommunityHighlights />
         <Footer />
         <PostItButton />
+        <FeedbackButton />
       </div>
     </ErrorBoundary>
   );

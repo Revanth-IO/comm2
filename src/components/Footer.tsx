@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube, MessageSquare } from 'lucide-react';
 
 const Footer = () => {
   const quickLinks = [
@@ -110,6 +110,13 @@ const Footer = () => {
                 <div>
                   <p className="text-gray-300">(555) 123-4567</p>
                   <p className="text-gray-400 text-sm">Mon-Fri 9AM-6PM</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <MessageSquare className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-gray-300">dev@upkaar.org</p>
+                  <p className="text-gray-400 text-sm">Technical Issues & Suggestions</p>
                 </div>
               </div>
             </div>
