@@ -12,9 +12,9 @@ interface GoogleUser {
 interface UseGoogleAuthReturn {
   user: GoogleUser | null;
   isLoading: boolean;
-  signIn: () => Promise<void>;
   signOut: () => void;
   isSignedIn: boolean;
+  isInitialized: boolean;
 }
 
 declare global {
@@ -30,6 +30,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const initializeGoogleAuth = async () => {
@@ -46,13 +47,15 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
           await loadGoogleScript();
         }
 
-        // Initialize Google Identity Services - no popup mode
+        // Initialize Google Identity Services
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleCredentialResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
         });
+
+        setIsInitialized(true);
 
         // Check if user is already signed in
         const savedUser = localStorage.getItem('googleUser');
@@ -106,132 +109,8 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
       setUser(googleUser);
       setIsSignedIn(true);
       localStorage.setItem('googleUser', JSON.stringify(googleUser));
-      setIsLoading(false);
     } catch (error) {
       console.error('Failed to process Google credential:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const signIn = async (): Promise<void> => {
-    try {
-      if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id-here') {
-        alert('Google authentication is not configured. Please contact the administrator.');
-        return;
-      }
-
-      setIsLoading(true);
-      
-      if (!window.google) {
-        await loadGoogleScript();
-      }
-
-      // Create a modal overlay
-      const overlay = document.createElement('div');
-      overlay.id = 'google-signin-overlay';
-      overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-
-      // Create modal content
-      const modal = document.createElement('div');
-      modal.style.cssText = `
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        position: relative;
-      `;
-
-      // Add title
-      const title = document.createElement('h3');
-      title.textContent = 'Sign in with Google';
-      title.style.cssText = `
-        margin: 0 0 20px 0;
-        font-size: 20px;
-        font-weight: 600;
-        color: #333;
-      `;
-
-      // Add close button
-      const closeButton = document.createElement('button');
-      closeButton.innerHTML = '×';
-      closeButton.style.cssText = `
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        border: none;
-        background: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
-
-      const cleanup = () => {
-        if (document.body.contains(overlay)) {
-          document.body.removeChild(overlay);
-        }
-        setIsLoading(false);
-      };
-
-      closeButton.onclick = cleanup;
-      overlay.onclick = (e) => {
-        if (e.target === overlay) cleanup();
-      };
-
-      // Create container for Google button
-      const buttonContainer = document.createElement('div');
-      buttonContainer.id = 'google-button-container';
-
-      modal.appendChild(closeButton);
-      modal.appendChild(title);
-      modal.appendChild(buttonContainer);
-      overlay.appendChild(modal);
-      document.body.appendChild(overlay);
-
-      // Render Google Sign-In button
-      window.google.accounts.id.renderButton(buttonContainer, {
-        theme: 'outline',
-        size: 'large',
-        type: 'standard',
-        width: 300,
-        text: 'signin_with',
-        shape: 'rectangular'
-      });
-
-      // Override the callback to handle cleanup
-      const originalCallback = window.google.accounts.id.initialize;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response: any) => {
-          cleanup();
-          handleCredentialResponse(response);
-        },
-        auto_select: false,
-        cancel_on_tap_outside: false,
-      });
-
-    } catch (error) {
-      console.error('Google Sign-In failed:', error);
-      setIsLoading(false);
     }
   };
 
@@ -248,8 +127,8 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
   return {
     user,
     isLoading,
-    signIn,
     signOut,
     isSignedIn,
+    isInitialized,
   };
 };
