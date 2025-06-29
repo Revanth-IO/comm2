@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import FeaturedEvents from './components/FeaturedEvents';
@@ -12,18 +13,20 @@ import PostItButton from './components/PostItButton';
 
 function App() {
   return (
-    <div className="min-h-screen bg-white">
-      <Header />
-      <Hero />
-      <FeaturedEvents />
-      <BusinessDirectory />
-      <ClassifiedsSection />
-      <NewsSection />
-      <ServicesSection />
-      <CommunityHighlights />
-      <Footer />
-      <PostItButton />
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-white">
+        <Header />
+        <Hero />
+        <FeaturedEvents />
+        <BusinessDirectory />
+        <ClassifiedsSection />
+        <NewsSection />
+        <ServicesSection />
+        <CommunityHighlights />
+        <Footer />
+        <PostItButton />
+      </div>
+    </ErrorBoundary>
   );
 }
 

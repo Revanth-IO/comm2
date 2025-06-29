@@ -1,13 +1,15 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "upkar-community-website",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Upkar - Indian diaspora community website for tri-state area",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:production": "npm run lint && vite build"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
@@ -32,5 +34,23 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
+  },
+  "keywords": [
+    "indian-community",
+    "tri-state-area",
+    "pennsylvania",
+    "new-jersey",
+    "new-york",
+    "diaspora",
+    "events",
+    "business-directory",
+    "classifieds"
+  ],
+  "author": "Upkar Community",
+  "license": "MIT",
+  "homepage": "https://upkar.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/upkar-org/website"
   }
 }
