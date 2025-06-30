@@ -34,7 +34,7 @@ const JoinCommunity: React.FC<JoinCommunityProps> = ({ isOpen, onClose }) => {
     'Family Activities'
   ];
 
-  const states = ['PA', 'NJ', 'NY'];
+  const states = ['PA', 'NJ', 'DE'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -112,7 +112,7 @@ const JoinCommunity: React.FC<JoinCommunityProps> = ({ isOpen, onClose }) => {
             </p>
             <div className="bg-orange-50 rounded-lg p-4">
               <p className="text-orange-800 font-medium">
-                🎉 You're now part of a vibrant community of 50,000+ Indians across PA, NJ, and NY!
+                🎉 You're now part of a vibrant community of 50,000+ Indians across PA, NJ, and DE!
               </p>
             </div>
           </div>

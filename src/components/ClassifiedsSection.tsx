@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2 } from 'lucide-react';
+import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X } from 'lucide-react';
 import { useClassifieds } from '../hooks/useClassifieds';
 
 const ClassifiedsSection: React.FC = () => {
@@ -7,15 +7,43 @@ const ClassifiedsSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [locationFilter, setLocationFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('all');
 
   const categories = ['All', 'For Sale', 'Housing', 'Jobs', 'Services', 'Community'];
+  const locations = ['All Locations', 'PA', 'NJ', 'DE', 'Philadelphia, PA', 'Jersey City, NJ', 'Wilmington, DE', 'Newark, DE', 'Edison, NJ'];
 
   const filteredClassifieds = classifieds.filter(ad => {
     const matchesSearch = ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ad.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         ad.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         ad.contactInfo.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesCategory = selectedCategory === 'All' || ad.category === selectedCategory;
+    
+    const matchesLocation = !locationFilter || locationFilter === 'All Locations' || 
+                           ad.location.toLowerCase().includes(locationFilter.toLowerCase());
+    
+    const matchesPrice = (!priceRange.min || !ad.price || ad.price >= parseFloat(priceRange.min)) &&
+                        (!priceRange.max || !ad.price || ad.price <= parseFloat(priceRange.max));
+    
+    const matchesDate = (() => {
+      if (dateFilter === 'all') return true;
+      const adDate = new Date(ad.createdAt);
+      const now = new Date();
+      const diffDays = Math.ceil((now.getTime() - adDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      switch (dateFilter) {
+        case 'today': return diffDays <= 1;
+        case 'week': return diffDays <= 7;
+        case 'month': return diffDays <= 30;
+        default: return true;
+      }
+    })();
+    
     const isApproved = ad.status === 'approved';
-    return matchesSearch && matchesCategory && isApproved;
+    return matchesSearch && matchesCategory && matchesLocation && matchesPrice && matchesDate && isApproved;
   });
 
   const sortedClassifieds = [...filteredClassifieds].sort((a, b) => {
@@ -28,10 +56,24 @@ const ClassifiedsSection: React.FC = () => {
         return (a.price || 0) - (b.price || 0);
       case 'price-high':
         return (b.price || 0) - (a.price || 0);
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'location':
+        return a.location.localeCompare(b.location);
       default:
         return 0;
     }
   });
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('All');
+    setSortBy('newest');
+    setPriceRange({ min: '', max: '' });
+    setLocationFilter('');
+    setDateFilter('all');
+    setShowAdvancedFilters(false);
+  };
 
   const formatPrice = (price?: number) => {
     if (!price) return 'Contact for price';
@@ -91,46 +133,150 @@ const ClassifiedsSection: React.FC = () => {
           )}
         </div>
 
-        {/* Search and Filters */}
+        {/* Enhanced Search and Filters */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
+          {/* Main Search Bar */}
+          <div className="flex flex-col lg:flex-row gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search classifieds..."
+                placeholder="Search by title, description, or seller name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
               />
             </div>
 
-            {/* Category Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200 appearance-none bg-white min-w-[150px]"
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className={`px-4 py-3 border rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 ${
+                  showAdvancedFilters 
+                    ? 'bg-orange-100 border-orange-300 text-orange-700' 
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Filters</span>
+              </button>
+              
+              {(searchTerm || selectedCategory !== 'All' || locationFilter || priceRange.min || priceRange.max || dateFilter !== 'all') && (
+                <button
+                  onClick={clearAllFilters}
+                  className="px-4 py-3 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition-colors duration-200 flex items-center space-x-2"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Clear</span>
+                </button>
+              )}
             </div>
+          </div>
 
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200 bg-white min-w-[150px]"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-            </select>
+          {/* Quick Filters */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                  selectedCategory === category
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="border-t border-gray-200 pt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Location Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    {locations.map(location => (
+                      <option key={location} value={location === 'All Locations' ? '' : location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Price Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Date Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Posted</label>
+                  <select
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="all">Any time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This week</option>
+                    <option value="month">This month</option>
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="location">Location A-Z</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Results Summary */}
+          <div className="flex items-center justify-between text-sm text-gray-600 mt-4 pt-4 border-t border-gray-200">
+            <span>
+              Showing {sortedClassifieds.length} of {filteredClassifieds.length} results
+              {searchTerm && ` for "${searchTerm}"`}
+            </span>
+            {sortedClassifieds.length !== classifieds.filter(ad => ad.status === 'approved').length && (
+              <span className="text-orange-600 font-medium">
+                Filters applied
+              </span>
+            )}
           </div>
         </div>
 
@@ -225,12 +371,20 @@ const ClassifiedsSection: React.FC = () => {
               <Search className="w-12 h-12 text-gray-400" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No classifieds found</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               {classifieds.length === 0 
                 ? "No classified ads have been posted yet. Be the first to post!" 
                 : "Try adjusting your search terms or filters"
               }
             </p>
+            {(searchTerm || selectedCategory !== 'All' || locationFilter || priceRange.min || priceRange.max || dateFilter !== 'all') && (
+              <button
+                onClick={clearAllFilters}
+                className="bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-700 transition-colors duration-200"
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
         )}
 

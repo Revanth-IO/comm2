@@ -8,7 +8,7 @@ const FeaturedEvents = () => {
       title: 'Diwali Festival Celebration',
       date: 'October 28, 2024',
       time: '6:00 PM - 11:00 PM',
-      location: 'Newark, NJ',
+      location: 'Newark, DE',
       attendees: 500,
       image: 'https://images.pexels.com/photos/6664189/pexels-photo-6664189.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop',
       description: 'Join us for the grand Diwali celebration with traditional performances, food, and fireworks.'
@@ -28,7 +28,7 @@ const FeaturedEvents = () => {
       title: 'Indian Entrepreneurs Meet',
       date: 'November 12, 2024',
       time: '7:00 PM - 9:00 PM',
-      location: 'New York, NY',
+      location: 'Wilmington, DE',
       attendees: 100,
       image: 'https://images.pexels.com/photos/3182834/pexels-photo-3182834.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop',
       description: 'Network with successful Indian entrepreneurs and share business insights.'

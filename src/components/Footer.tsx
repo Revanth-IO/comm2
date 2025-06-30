@@ -19,8 +19,8 @@ const Footer = () => {
   ];
 
   const locations = [
-    { city: 'New York', state: 'NY' },
-    { city: 'Newark', state: 'NJ' },
+    { city: 'Wilmington', state: 'DE' },
+    { city: 'Newark', state: 'DE' },
     { city: 'Jersey City', state: 'NJ' },
     { city: 'Philadelphia', state: 'PA' },
     { city: 'Edison', state: 'NJ' }
@@ -42,7 +42,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Connecting and empowering the Indian diaspora across Pennsylvania, New Jersey, and New York through community, culture, and kindness.
+              Connecting and empowering the Indian diaspora across Pennsylvania, New Jersey, and Delaware through community, culture, and kindness.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">

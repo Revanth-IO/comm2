@@ -25,7 +25,7 @@ const Hero = () => {
             </h1>
             
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Connecting Indians in Pennsylvania, New Jersey, and New York through events, 
+              Connecting Indians in Pennsylvania, New Jersey, and Delaware through events, 
               businesses, news, and cultural celebrations. Your gateway to community.
             </p>
 
