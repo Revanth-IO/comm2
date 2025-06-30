@@ -21,6 +21,7 @@ export const useClassifieds = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Mock data fallback with valid UUIDs
   const mockClassifieds: ClassifiedAd[] = [
@@ -132,11 +133,33 @@ export const useClassifieds = () => {
       updatedAt: '2024-01-17T11:45:00Z',
       expiresAt: '2024-02-17T11:45:00Z',
       featured: false
+    },
+    {
+      id: '550e8400-e29b-41d4-a716-446655440006',
+      title: 'Car for Sale - Honda Civic 2020',
+      description: 'Well-maintained Honda Civic 2020, low mileage, excellent condition. Single owner, all service records available.',
+      category: 'For Sale',
+      subcategory: 'Vehicles',
+      price: 18500,
+      location: 'Wilmington, DE',
+      contactInfo: {
+        name: 'Mike Chen',
+        email: 'mike.chen@email.com',
+        phone: '(302) 555-1234'
+      },
+      images: ['https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
+      status: 'pending',
+      authorId: '550e8400-e29b-41d4-a716-446655440016',
+      authorName: 'Mike Chen',
+      createdAt: '2024-01-18T08:30:00Z',
+      updatedAt: '2024-01-18T08:30:00Z',
+      expiresAt: '2024-02-18T08:30:00Z',
+      featured: false
     }
   ];
 
   // Storage key for persisted changes
-  const STORAGE_KEY = 'upkaar_classified_changes';
+  const STORAGE_KEY = 'upkaar_classified_changes_v2';
 
   // Load persisted approvals/rejections from localStorage
   const loadPersistedChanges = useCallback(() => {
@@ -156,6 +179,12 @@ export const useClassifieds = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(changes));
       console.log('💾 Saved persisted changes:', changes);
+      
+      // Trigger a storage event for cross-tab synchronization
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEY,
+        newValue: JSON.stringify(changes)
+      }));
     } catch (error) {
       console.warn('⚠️ Failed to save changes to localStorage:', error);
     }
@@ -273,7 +302,7 @@ export const useClassifieds = () => {
       setIsLoading(false);
       setLastUpdate(Date.now());
     }
-  }, [applyPersistedChanges]);
+  }, [applyPersistedChanges, forceUpdate]);
 
   const createClassified = async (data: CreateClassifiedData): Promise<void> => {
     try {
@@ -439,9 +468,15 @@ export const useClassifieds = () => {
       }
 
       setLastUpdate(timestamp);
+      setForceUpdate(prev => prev + 1);
+      
+      // Show success notification
+      showNotification('✅ Item approved successfully!', 'success');
+      
       console.log('✅ Classified approved successfully');
     } catch (error) {
       console.error('❌ Error approving classified:', error);
+      showNotification('❌ Failed to approve item. Please try again.', 'error');
       throw new Error('Failed to approve classified');
     }
   }, [loadPersistedChanges, savePersistedChanges]);
@@ -512,22 +547,69 @@ export const useClassifieds = () => {
       }
 
       setLastUpdate(timestamp);
+      setForceUpdate(prev => prev + 1);
+      
+      // Show success notification
+      showNotification('✅ Item rejected successfully!', 'warning');
+      
       console.log('✅ Classified rejected successfully');
     } catch (error) {
       console.error('❌ Error rejecting classified:', error);
+      showNotification('❌ Failed to reject item. Please try again.', 'error');
       throw new Error('Failed to reject classified');
     }
   }, [loadPersistedChanges, savePersistedChanges]);
+
+  // Helper function to show notifications
+  const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-orange-500';
+    notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300`;
+    notification.textContent = message;
+    notification.style.transform = 'translateX(100%)';
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Animate out and remove
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  };
 
   // Clear persisted changes (for debugging)
   const clearPersistedChanges = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       console.log('🗑️ Cleared persisted changes');
+      setForceUpdate(prev => prev + 1);
       fetchClassifieds(); // Refresh data
     } catch (error) {
       console.warn('⚠️ Failed to clear persisted changes:', error);
     }
+  }, [fetchClassifieds]);
+
+  // Listen for storage changes (cross-tab synchronization)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) {
+        console.log('🔄 Storage changed, refreshing classifieds');
+        setForceUpdate(prev => prev + 1);
+        fetchClassifieds();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [fetchClassifieds]);
 
   useEffect(() => {
