@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, UserRole, USER_PERMISSIONS } from '../types';
 
 interface UseAuthReturn {
@@ -49,25 +49,28 @@ export const useAuth = (): UseAuthReturn => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize auth state from localStorage
   useEffect(() => {
-    // Check for saved user session
+    console.log('🔄 Initializing auth state...');
     const savedUser = localStorage.getItem('currentUser');
-    console.log('Checking localStorage for saved user:', savedUser);
     
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-        console.log('Restored user from localStorage:', parsedUser);
+        console.log('✅ Restored user from localStorage:', parsedUser);
         setUser(parsedUser);
       } catch (error) {
-        console.error('Error parsing saved user:', error);
+        console.error('❌ Error parsing saved user:', error);
         localStorage.removeItem('currentUser');
       }
+    } else {
+      console.log('ℹ️ No saved user found');
     }
+    
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     console.log('🔐 Login attempt:', { email, password: '***' });
     setIsLoading(true);
     
@@ -82,7 +85,6 @@ export const useAuth = (): UseAuthReturn => {
           console.log('✅ Login successful for demo user:', foundUser);
           setUser(foundUser);
           localStorage.setItem('currentUser', JSON.stringify(foundUser));
-          setIsLoading(false);
           return;
         }
       }
@@ -93,7 +95,6 @@ export const useAuth = (): UseAuthReturn => {
         console.log('✅ Login successful for existing user:', foundUser);
         setUser(foundUser);
         localStorage.setItem('currentUser', JSON.stringify(foundUser));
-        setIsLoading(false);
         return;
       }
       
@@ -116,15 +117,15 @@ export const useAuth = (): UseAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     console.log('🚪 Logging out user');
     setUser(null);
     localStorage.removeItem('currentUser');
-  };
+  }, []);
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = useCallback((permission: string): boolean => {
     // Allow guest users to post classifieds
     if (!user && permission === 'add_classified') {
       console.log('✅ Guest permission granted for add_classified');
@@ -148,7 +149,7 @@ export const useAuth = (): UseAuthReturn => {
     const hasPermissionResult = userPermissions.includes(permission);
     console.log('🎯 Permission check result:', hasPermissionResult);
     return hasPermissionResult;
-  };
+  }, [user]);
 
   // Debug logging for state changes
   useEffect(() => {

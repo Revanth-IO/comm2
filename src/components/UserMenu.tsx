@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, LogOut, Settings, Shield, Plus, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import LoginPrompt from './LoginPrompt';
@@ -7,17 +7,22 @@ const UserMenu: React.FC = () => {
   const { user, isAuthenticated, logout, hasPermission } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Debug logging
+  // Force re-render when authentication state changes
+  const [renderKey, setRenderKey] = useState(0);
+  
   useEffect(() => {
-    console.log('👤 UserMenu render:', { 
+    setRenderKey(prev => prev + 1);
+    console.log('👤 UserMenu re-rendered:', { 
       user: user ? { name: user.name, email: user.email, role: user.role } : null, 
       isAuthenticated, 
       userRole: user?.role,
       canManageRoles: hasPermission('manage_roles'),
-      canApproveContent: hasPermission('approve_content')
+      canApproveContent: hasPermission('approve_content'),
+      renderKey
     });
-  }, [user, isAuthenticated, hasPermission]);
+  }, [user, isAuthenticated]);
 
   const handleLogout = () => {
     console.log('🚪 Logout clicked');
@@ -34,18 +39,19 @@ const UserMenu: React.FC = () => {
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showMenu) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false);
       }
     };
 
     if (showMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showMenu]);
 
-  if (!isAuthenticated) {
+  // Show loading state
+  if (!isAuthenticated && !user) {
     return (
       <>
         <button
@@ -64,8 +70,9 @@ const UserMenu: React.FC = () => {
     );
   }
 
+  // Show authenticated user menu
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef} key={renderKey}>
       <button
         onClick={(e) => {
           e.stopPropagation();

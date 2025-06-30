@@ -37,7 +37,11 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
     try {
       await login(formData.email, formData.password);
       console.log('✅ Login successful, closing modal');
-      onClose();
+      
+      // Force a small delay to ensure state updates propagate
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (error) {
       console.error('❌ Login failed:', error);
       setError('Invalid email or password. Please try again.');
@@ -52,7 +56,11 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
     try {
       await login(email, 'test');
       console.log('✅ Demo login successful');
-      onClose();
+      
+      // Force a small delay to ensure state updates propagate
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (error) {
       console.error('❌ Demo login failed:', error);
       setError('Demo login failed. Please try again.');
