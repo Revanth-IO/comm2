@@ -52,6 +52,8 @@ export const useAuth = (): UseAuthReturn => {
   useEffect(() => {
     // Check for saved user session
     const savedUser = localStorage.getItem('currentUser');
+    console.log('Checking localStorage for saved user:', savedUser);
+    
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
@@ -66,11 +68,10 @@ export const useAuth = (): UseAuthReturn => {
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
+    console.log('🔐 Login attempt:', { email, password: '***' });
     setIsLoading(true);
     
     try {
-      console.log('Attempting login for:', email);
-      
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -78,7 +79,7 @@ export const useAuth = (): UseAuthReturn => {
       if (DEMO_PASSWORDS[email] && DEMO_PASSWORDS[email] === password) {
         const foundUser = MOCK_USERS.find(u => u.email === email);
         if (foundUser) {
-          console.log('Login successful for demo user:', foundUser);
+          console.log('✅ Login successful for demo user:', foundUser);
           setUser(foundUser);
           localStorage.setItem('currentUser', JSON.stringify(foundUser));
           setIsLoading(false);
@@ -89,7 +90,7 @@ export const useAuth = (): UseAuthReturn => {
       // Check if user exists in mock data (for any password in demo mode)
       const foundUser = MOCK_USERS.find(u => u.email === email);
       if (foundUser) {
-        console.log('Login successful for existing user:', foundUser);
+        console.log('✅ Login successful for existing user:', foundUser);
         setUser(foundUser);
         localStorage.setItem('currentUser', JSON.stringify(foundUser));
         setIsLoading(false);
@@ -106,11 +107,11 @@ export const useAuth = (): UseAuthReturn => {
         createdAt: new Date().toISOString()
       };
       
-      console.log('Created new guest user:', guestUser);
+      console.log('✅ Created new guest user:', guestUser);
       setUser(guestUser);
       localStorage.setItem('currentUser', JSON.stringify(guestUser));
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       throw new Error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -118,34 +119,44 @@ export const useAuth = (): UseAuthReturn => {
   };
 
   const logout = () => {
-    console.log('Logging out user');
+    console.log('🚪 Logging out user');
     setUser(null);
     localStorage.removeItem('currentUser');
   };
 
   const hasPermission = (permission: string): boolean => {
     // Allow guest users to post classifieds
-    if (!user && permission === 'add_classified') return true;
-    if (!user) return permission === 'read_content'; // Guests can only read other content
+    if (!user && permission === 'add_classified') {
+      console.log('✅ Guest permission granted for add_classified');
+      return true;
+    }
+    if (!user) {
+      console.log('❌ No user, only read_content allowed');
+      return permission === 'read_content';
+    }
 
-    console.log('Checking permission:', permission, 'for user role:', user.role);
+    console.log('🔍 Checking permission:', permission, 'for user role:', user.role);
     
     const userPermissions = USER_PERMISSIONS[user.role];
-    console.log('User permissions:', userPermissions);
+    console.log('📋 User permissions:', userPermissions);
     
     if (userPermissions.includes('all')) {
-      console.log('User has all permissions');
+      console.log('✅ User has ALL permissions');
       return true;
     }
     
     const hasPermissionResult = userPermissions.includes(permission);
-    console.log('Permission check result:', hasPermissionResult);
+    console.log('🎯 Permission check result:', hasPermissionResult);
     return hasPermissionResult;
   };
 
-  // Debug logging
+  // Debug logging for state changes
   useEffect(() => {
-    console.log('Auth state changed:', { user, isAuthenticated: !!user, isLoading });
+    console.log('🔄 Auth state changed:', { 
+      user: user ? { name: user.name, email: user.email, role: user.role } : null, 
+      isAuthenticated: !!user, 
+      isLoading 
+    });
   }, [user, isLoading]);
 
   return {

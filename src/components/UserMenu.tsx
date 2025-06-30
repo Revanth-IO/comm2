@@ -10,8 +10,8 @@ const UserMenu: React.FC = () => {
 
   // Debug logging
   useEffect(() => {
-    console.log('UserMenu render:', { 
-      user, 
+    console.log('👤 UserMenu render:', { 
+      user: user ? { name: user.name, email: user.email, role: user.role } : null, 
       isAuthenticated, 
       userRole: user?.role,
       canManageRoles: hasPermission('manage_roles'),
@@ -20,15 +20,30 @@ const UserMenu: React.FC = () => {
   }, [user, isAuthenticated, hasPermission]);
 
   const handleLogout = () => {
+    console.log('🚪 Logout clicked');
     logout();
     setShowMenu(false);
   };
 
   const handleMenuItemClick = (action: string) => {
-    console.log('Menu item clicked:', action);
+    console.log('📱 Menu item clicked:', action);
     setShowMenu(false);
     // In a real app, you would navigate to the appropriate page here
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenu) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showMenu]);
 
   if (!isAuthenticated) {
     return (
@@ -52,7 +67,10 @@ const UserMenu: React.FC = () => {
   return (
     <div className="relative">
       <button
-        onClick={() => setShowMenu(!showMenu)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowMenu(!showMenu);
+        }}
         className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
       >
         <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
@@ -62,17 +80,44 @@ const UserMenu: React.FC = () => {
         </div>
         <div className="text-left hidden sm:block">
           <div className="text-sm font-medium text-gray-900">{user?.name}</div>
-          <div className="text-xs text-gray-500 capitalize">{user?.role.replace('_', ' ')}</div>
+          <div className="text-xs text-gray-500 capitalize flex items-center space-x-2">
+            <span>{user?.role.replace('_', ' ')}</span>
+            {user?.role === 'admin' && (
+              <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                Admin
+              </span>
+            )}
+            {user?.role === 'moderator' && (
+              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                Mod
+              </span>
+            )}
+          </div>
         </div>
       </button>
 
       {showMenu && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+        <div 
+          className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="px-4 py-3 border-b border-gray-200">
             <div className="text-sm font-medium text-gray-900">{user?.name}</div>
             <div className="text-sm text-gray-500">{user?.email}</div>
-            <div className="text-xs text-orange-600 font-medium capitalize mt-1">
-              {user?.role.replace('_', ' ')} Account
+            <div className="flex items-center space-x-2 mt-1">
+              <span className="text-xs text-orange-600 font-medium capitalize">
+                {user?.role.replace('_', ' ')} Account
+              </span>
+              {user?.role === 'admin' && (
+                <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                  ADMIN
+                </span>
+              )}
+              {user?.role === 'moderator' && (
+                <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
+                  MOD
+                </span>
+              )}
             </div>
           </div>
 
@@ -102,8 +147,8 @@ const UserMenu: React.FC = () => {
               >
                 <FileText className="w-4 h-4" />
                 <span>Content Review</span>
-                <span className="ml-auto bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
-                  Mod
+                <span className="ml-auto bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
+                  MOD
                 </span>
               </button>
             )}
@@ -115,8 +160,8 @@ const UserMenu: React.FC = () => {
               >
                 <Shield className="w-4 h-4" />
                 <span>Admin Panel</span>
-                <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                  Admin
+                <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                  ADMIN
                 </span>
               </button>
             )}
