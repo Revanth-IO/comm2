@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, UserPlus } from 'lucide-react';
+import { X, LogIn, UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface LoginPromptProps {
@@ -9,8 +9,9 @@ interface LoginPromptProps {
 }
 
 const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) => {
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,15 +24,20 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    
     try {
       await login(formData.email, formData.password);
       onClose();
     } catch (error) {
       console.error('Login failed:', error);
+      setError('Invalid email or password. Please try again.');
     }
   };
 
@@ -66,6 +72,12 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
           {message && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
               <p className="text-orange-800 text-sm">{message}</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
 
@@ -122,9 +134,17 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all duration-200 transform hover:scale-105"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
             >
-              {isLogin ? 'Sign In' : 'Create Account'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+              )}
             </button>
           </form>
 
@@ -135,6 +155,17 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
+          </div>
+
+          {/* Demo Accounts */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h4>
+            <div className="space-y-1 text-xs text-gray-600">
+              <p><strong>Admin:</strong> admin@upkaar.org</p>
+              <p><strong>Moderator:</strong> moderator@upkaar.org</p>
+              <p><strong>User:</strong> user@example.com</p>
+              <p className="text-gray-500">Password: <strong>test</strong></p>
+            </div>
           </div>
         </div>
       </div>

@@ -27,8 +27,23 @@ const MOCK_USERS: User[] = [
     role: 'user',
     isActive: true,
     createdAt: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '3',
+    email: 'moderator@upkaar.org',
+    name: 'Moderator User',
+    role: 'moderator',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z'
   }
 ];
+
+// Valid passwords for demo accounts
+const DEMO_PASSWORDS: Record<string, string> = {
+  'admin@upkaar.org': 'test',
+  'user@example.com': 'test',
+  'moderator@upkaar.org': 'test'
+};
 
 export const useAuth = (): UseAuthReturn => {
   const [user, setUser] = useState<User | null>(null);
@@ -38,29 +53,61 @@ export const useAuth = (): UseAuthReturn => {
     // Check for saved user session
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('currentUser');
+      }
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
-    // Mock login - in a real app, this would call your authentication API
-    const foundUser = MOCK_USERS.find(u => u.email === email);
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('currentUser', JSON.stringify(foundUser));
-    } else {
-      // Create a guest user for demo purposes
+    setIsLoading(true);
+    
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if it's a demo account with correct password
+      if (DEMO_PASSWORDS[email] && DEMO_PASSWORDS[email] === password) {
+        const foundUser = MOCK_USERS.find(u => u.email === email);
+        if (foundUser) {
+          setUser(foundUser);
+          localStorage.setItem('currentUser', JSON.stringify(foundUser));
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Check if user exists in mock data (for any password in demo mode)
+      const foundUser = MOCK_USERS.find(u => u.email === email);
+      if (foundUser) {
+        setUser(foundUser);
+        localStorage.setItem('currentUser', JSON.stringify(foundUser));
+        setIsLoading(false);
+        return;
+      }
+      
+      // Create a guest user for any other email (demo purposes)
       const guestUser: User = {
         id: Date.now().toString(),
         email,
-        name: email.split('@')[0],
+        name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         role: 'user',
         isActive: true,
         createdAt: new Date().toISOString()
       };
+      
       setUser(guestUser);
       localStorage.setItem('currentUser', JSON.stringify(guestUser));
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
