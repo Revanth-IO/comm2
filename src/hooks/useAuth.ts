@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import { User, UserRole, USER_PERMISSIONS } from '../types';
 
 interface UseAuthReturn {
   user: User | null;
@@ -121,7 +121,6 @@ export const useAuth = (): UseAuthReturn => {
     if (!user && permission === 'add_classified') return true;
     if (!user) return permission === 'read_content'; // Guests can only read other content
 
-    const { USER_PERMISSIONS } = require('../types');
     const userPermissions = USER_PERMISSIONS[user.role];
     
     if (userPermissions.includes('all')) return true;
