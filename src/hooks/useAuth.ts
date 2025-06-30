@@ -46,10 +46,16 @@ const DEMO_PASSWORDS: Record<string, string> = {
   'moderator@upkaar.org': 'test'
 };
 
+// Check if email is a demo account
+const isDemoAccount = (email: string): boolean => {
+  return Object.keys(DEMO_PASSWORDS).includes(email);
+};
+
 export const useAuth = (): UseAuthReturn => {
   const [fallbackUser, setFallbackUser] = useState<User | null>(null);
   const [fallbackLoading, setFallbackLoading] = useState(true);
   const [useSupabase, setUseSupabase] = useState(true);
+  const [supabaseAvailable, setSupabaseAvailable] = useState(true);
 
   // Try Supabase first
   const supabaseAuth = useSupabaseAuth();
@@ -85,6 +91,7 @@ export const useAuth = (): UseAuthReturn => {
             supabaseKey === 'your-supabase-anon-key') {
           console.log('ℹ️ Supabase not configured, using fallback auth');
           setUseSupabase(false);
+          setSupabaseAvailable(false);
           return;
         }
 
@@ -95,13 +102,16 @@ export const useAuth = (): UseAuthReturn => {
         if (error) {
           console.log('ℹ️ Supabase connection failed, using fallback auth:', error.message);
           setUseSupabase(false);
+          setSupabaseAvailable(false);
         } else {
           console.log('✅ Supabase connection successful');
           setUseSupabase(true);
+          setSupabaseAvailable(true);
         }
       } catch (error) {
         console.log('ℹ️ Supabase not available, using fallback auth:', error);
         setUseSupabase(false);
+        setSupabaseAvailable(false);
       }
     };
 
@@ -202,18 +212,83 @@ export const useAuth = (): UseAuthReturn => {
     return userPermissions.includes(permission);
   }, [fallbackUser]);
 
-  // Return appropriate auth based on availability
-  if (useSupabase && !supabaseAuth.isLoading) {
-    return supabaseAuth;
-  }
+  // Hybrid login function that tries Supabase first, then falls back for demo accounts
+  const hybridLogin = useCallback(async (email: string, password: string): Promise<void> => {
+    console.log('🔄 Hybrid login attempt for:', email);
+    
+    // If Supabase is available and it's not a demo account, try Supabase first
+    if (supabaseAvailable && !isDemoAccount(email)) {
+      try {
+        await supabaseAuth.login(email, password);
+        console.log('✅ Supabase login successful');
+        return;
+      } catch (error) {
+        console.log('❌ Supabase login failed, trying fallback:', error);
+        // Fall through to fallback login
+      }
+    }
+    
+    // For demo accounts or when Supabase fails, use fallback
+    console.log('🔄 Using fallback login for:', email);
+    await fallbackLogin(email, password);
+  }, [supabaseAvailable, supabaseAuth.login, fallbackLogin]);
+
+  // Hybrid signup function
+  const hybridSignUp = useCallback(async (email: string, password: string, name: string): Promise<void> => {
+    console.log('🔄 Hybrid signup attempt for:', email);
+    
+    // If Supabase is available, try Supabase first
+    if (supabaseAvailable) {
+      try {
+        await supabaseAuth.signUp(email, password, name);
+        console.log('✅ Supabase signup successful');
+        return;
+      } catch (error) {
+        console.log('❌ Supabase signup failed, trying fallback:', error);
+        // Fall through to fallback signup
+      }
+    }
+    
+    // Use fallback signup
+    console.log('🔄 Using fallback signup for:', email);
+    await fallbackSignUp(email, password, name);
+  }, [supabaseAvailable, supabaseAuth.signUp, fallbackSignUp]);
+
+  // Hybrid logout function
+  const hybridLogout = useCallback(async (): Promise<void> => {
+    console.log('🔄 Hybrid logout');
+    
+    // Try both logout methods to ensure clean state
+    try {
+      if (supabaseAvailable && supabaseAuth.user) {
+        await supabaseAuth.logout();
+      }
+    } catch (error) {
+      console.log('❌ Supabase logout failed:', error);
+    }
+    
+    await fallbackLogout();
+  }, [supabaseAvailable, supabaseAuth.user, supabaseAuth.logout, fallbackLogout]);
+
+  // Determine current user and auth state
+  const currentUser = supabaseAuth.user || fallbackUser;
+  const isCurrentlyLoading = supabaseAuth.isLoading || fallbackLoading;
+
+  // Hybrid permission check
+  const hybridHasPermission = useCallback((permission: string): boolean => {
+    if (supabaseAuth.user) {
+      return supabaseAuth.hasPermission(permission);
+    }
+    return fallbackHasPermission(permission);
+  }, [supabaseAuth.user, supabaseAuth.hasPermission, fallbackHasPermission]);
 
   return {
-    user: fallbackUser,
-    isAuthenticated: !!fallbackUser,
-    login: fallbackLogin,
-    signUp: fallbackSignUp,
-    logout: fallbackLogout,
-    hasPermission: fallbackHasPermission,
-    isLoading: fallbackLoading
+    user: currentUser,
+    isAuthenticated: !!currentUser,
+    login: hybridLogin,
+    signUp: hybridSignUp,
+    logout: hybridLogout,
+    hasPermission: hybridHasPermission,
+    isLoading: isCurrentlyLoading
   };
 };
