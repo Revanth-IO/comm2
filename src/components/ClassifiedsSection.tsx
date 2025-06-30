@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X } from 'lucide-react';
 import { useClassifieds } from '../hooks/useClassifieds';
 
@@ -14,6 +14,22 @@ const ClassifiedsSection: React.FC = () => {
 
   const categories = ['All', 'For Sale', 'Housing', 'Jobs', 'Services', 'Community'];
   const locations = ['All Locations', 'PA', 'NJ', 'DE', 'Philadelphia, PA', 'Jersey City, NJ', 'Wilmington, DE', 'Newark, DE', 'Edison, NJ'];
+
+  // Listen for search events from header
+  useEffect(() => {
+    const handleHeaderSearch = (event: CustomEvent) => {
+      const { searchTerm: headerSearchTerm } = event.detail;
+      setSearchTerm(headerSearchTerm);
+      if (headerSearchTerm) {
+        setShowAdvancedFilters(false); // Close advanced filters when searching from header
+      }
+    };
+
+    window.addEventListener('headerSearch', handleHeaderSearch as EventListener);
+    return () => {
+      window.removeEventListener('headerSearch', handleHeaderSearch as EventListener);
+    };
+  }, []);
 
   const filteredClassifieds = classifieds.filter(ad => {
     const matchesSearch = ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -118,6 +134,13 @@ const ClassifiedsSection: React.FC = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Buy, sell, rent, and find services within the Indian community
           </p>
+          {searchTerm && (
+            <div className="mt-4 bg-orange-100 border border-orange-200 rounded-lg p-3 max-w-md mx-auto">
+              <p className="text-orange-800 font-medium">
+                🔍 Searching for: "{searchTerm}"
+              </p>
+            </div>
+          )}
           {classifieds.length > 0 && (
             <div className="mt-4 flex items-center justify-center space-x-4">
               <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -133,15 +156,15 @@ const ClassifiedsSection: React.FC = () => {
           )}
         </div>
 
-        {/* Enhanced Search and Filters */}
+        {/* Enhanced Filters */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          {/* Main Search Bar */}
+          {/* Local Search Bar (Secondary) */}
           <div className="flex flex-col lg:flex-row gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by title, description, or seller name..."
+                placeholder="Refine your search here or use the search bar above..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
@@ -374,6 +397,8 @@ const ClassifiedsSection: React.FC = () => {
             <p className="text-gray-600 mb-4">
               {classifieds.length === 0 
                 ? "No classified ads have been posted yet. Be the first to post!" 
+                : searchTerm 
+                ? `No results found for "${searchTerm}". Try different keywords or clear your search.`
                 : "Try adjusting your search terms or filters"
               }
             </p>
