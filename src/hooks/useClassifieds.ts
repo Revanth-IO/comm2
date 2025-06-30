@@ -134,6 +134,25 @@ export const useClassifieds = () => {
     }
   ];
 
+  // Load persisted approvals/rejections from localStorage
+  const loadPersistedChanges = () => {
+    try {
+      const saved = localStorage.getItem('classifiedChanges');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  // Save approval/rejection changes to localStorage
+  const savePersistedChanges = (changes: Record<string, { status: string; rejectionReason?: string }>) => {
+    try {
+      localStorage.setItem('classifiedChanges', JSON.stringify(changes));
+    } catch (error) {
+      console.warn('Failed to save changes to localStorage:', error);
+    }
+  };
+
   const fetchClassifieds = async () => {
     try {
       setIsLoading(true);
@@ -155,8 +174,24 @@ export const useClassifieds = () => {
           supabaseUrl === 'https://placeholder.supabase.co' ||
           supabaseUrl === 'your-supabase-url' ||
           supabaseKey === 'your-supabase-anon-key') {
-        console.log('🔄 Supabase not configured, using mock data');
-        setClassifieds(mockClassifieds);
+        console.log('🔄 Supabase not configured, using mock data with persisted changes');
+        
+        // Apply persisted changes to mock data
+        const persistedChanges = loadPersistedChanges();
+        const updatedMockData = mockClassifieds.map(ad => {
+          const change = persistedChanges[ad.id];
+          if (change) {
+            return {
+              ...ad,
+              status: change.status as any,
+              rejectionReason: change.rejectionReason,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return ad;
+        });
+        
+        setClassifieds(updatedMockData);
         setIsLoading(false);
         return;
       }
@@ -173,8 +208,24 @@ export const useClassifieds = () => {
 
       if (supabaseError) {
         console.error('❌ Supabase error:', supabaseError);
-        console.log('🔄 Falling back to mock data');
-        setClassifieds(mockClassifieds);
+        console.log('🔄 Falling back to mock data with persisted changes');
+        
+        // Apply persisted changes to mock data
+        const persistedChanges = loadPersistedChanges();
+        const updatedMockData = mockClassifieds.map(ad => {
+          const change = persistedChanges[ad.id];
+          if (change) {
+            return {
+              ...ad,
+              status: change.status as any,
+              rejectionReason: change.rejectionReason,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return ad;
+        });
+        
+        setClassifieds(updatedMockData);
       } else {
         console.log('✅ Fetched classifieds from Supabase:', data?.length || 0);
         
@@ -199,18 +250,67 @@ export const useClassifieds = () => {
             createdAt: item.created_at || new Date().toISOString(),
             updatedAt: item.updated_at || new Date().toISOString(),
             expiresAt: item.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            featured: Boolean(item.featured)
+            featured: Boolean(item.featured),
+            rejectionReason: item.rejection_reason
           }));
-          setClassifieds([...transformedData, ...mockClassifieds]);
+          
+          // Apply persisted changes to mock data and combine
+          const persistedChanges = loadPersistedChanges();
+          const updatedMockData = mockClassifieds.map(ad => {
+            const change = persistedChanges[ad.id];
+            if (change) {
+              return {
+                ...ad,
+                status: change.status as any,
+                rejectionReason: change.rejectionReason,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return ad;
+          });
+          
+          setClassifieds([...transformedData, ...updatedMockData]);
         } else {
-          console.log('🔄 No data in Supabase, using mock data');
-          setClassifieds(mockClassifieds);
+          console.log('🔄 No data in Supabase, using mock data with persisted changes');
+          
+          // Apply persisted changes to mock data
+          const persistedChanges = loadPersistedChanges();
+          const updatedMockData = mockClassifieds.map(ad => {
+            const change = persistedChanges[ad.id];
+            if (change) {
+              return {
+                ...ad,
+                status: change.status as any,
+                rejectionReason: change.rejectionReason,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return ad;
+          });
+          
+          setClassifieds(updatedMockData);
         }
       }
     } catch (error) {
       console.error('❌ Error fetching classifieds:', error);
-      console.log('🔄 Using mock data due to error');
-      setClassifieds(mockClassifieds);
+      console.log('🔄 Using mock data with persisted changes due to error');
+      
+      // Apply persisted changes to mock data
+      const persistedChanges = loadPersistedChanges();
+      const updatedMockData = mockClassifieds.map(ad => {
+        const change = persistedChanges[ad.id];
+        if (change) {
+          return {
+            ...ad,
+            status: change.status as any,
+            rejectionReason: change.rejectionReason,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return ad;
+      });
+      
+      setClassifieds(updatedMockData);
       setError(null);
     } finally {
       setIsLoading(false);
@@ -319,29 +419,60 @@ export const useClassifieds = () => {
   const approveClassified = async (id: string): Promise<void> => {
     try {
       setError(null);
+      console.log('🔄 Approving classified:', id);
+
+      let supabaseSuccess = false;
 
       // Try Supabase first
       try {
-        const { supabase } = await import('../lib/supabase');
-        const { error } = await supabase
-          .from('classified_ads')
-          .update({ status: 'approved' })
-          .eq('id', id);
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        if (error) {
-          throw error;
+        if (supabaseUrl && supabaseKey && 
+            supabaseUrl !== 'https://placeholder.supabase.co' &&
+            supabaseUrl !== 'your-supabase-url' &&
+            supabaseKey !== 'your-supabase-anon-key') {
+          
+          const { supabase } = await import('../lib/supabase');
+          const { error } = await supabase
+            .from('classified_ads')
+            .update({ 
+              status: 'approved',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+          if (error) {
+            throw error;
+          }
+          
+          console.log('✅ Approved classified in Supabase');
+          supabaseSuccess = true;
         }
-        console.log('✅ Approved classified in Supabase');
       } catch (supabaseError) {
-        console.warn('⚠️ Supabase update failed, updating locally only');
+        console.warn('⚠️ Supabase update failed:', supabaseError);
       }
 
-      // Update local state
+      // Update local state and persist to localStorage
       setClassifieds(prev => 
         prev.map(ad => 
-          ad.id === id ? { ...ad, status: 'approved' } : ad
+          ad.id === id ? { 
+            ...ad, 
+            status: 'approved',
+            updatedAt: new Date().toISOString()
+          } : ad
         )
       );
+
+      // If Supabase failed, persist the change locally
+      if (!supabaseSuccess) {
+        const persistedChanges = loadPersistedChanges();
+        persistedChanges[id] = { status: 'approved' };
+        savePersistedChanges(persistedChanges);
+        console.log('💾 Saved approval to localStorage for persistence');
+      }
+
+      console.log('✅ Classified approved successfully');
     } catch (error) {
       console.error('❌ Error approving classified:', error);
       throw new Error('Failed to approve classified');
@@ -351,32 +482,62 @@ export const useClassifieds = () => {
   const rejectClassified = async (id: string, reason?: string): Promise<void> => {
     try {
       setError(null);
+      console.log('🔄 Rejecting classified:', id, 'Reason:', reason);
+
+      let supabaseSuccess = false;
 
       // Try Supabase first
       try {
-        const { supabase } = await import('../lib/supabase');
-        const { error } = await supabase
-          .from('classified_ads')
-          .update({ 
-            status: 'rejected',
-            rejection_reason: reason 
-          })
-          .eq('id', id);
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        if (error) {
-          throw error;
+        if (supabaseUrl && supabaseKey && 
+            supabaseUrl !== 'https://placeholder.supabase.co' &&
+            supabaseUrl !== 'your-supabase-url' &&
+            supabaseKey !== 'your-supabase-anon-key') {
+          
+          const { supabase } = await import('../lib/supabase');
+          const { error } = await supabase
+            .from('classified_ads')
+            .update({ 
+              status: 'rejected',
+              rejection_reason: reason,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+          if (error) {
+            throw error;
+          }
+          
+          console.log('✅ Rejected classified in Supabase');
+          supabaseSuccess = true;
         }
-        console.log('✅ Rejected classified in Supabase');
       } catch (supabaseError) {
-        console.warn('⚠️ Supabase update failed, updating locally only');
+        console.warn('⚠️ Supabase update failed:', supabaseError);
       }
 
       // Update local state
       setClassifieds(prev => 
         prev.map(ad => 
-          ad.id === id ? { ...ad, status: 'rejected', rejectionReason: reason } : ad
+          ad.id === id ? { 
+            ...ad, 
+            status: 'rejected', 
+            rejectionReason: reason,
+            updatedAt: new Date().toISOString()
+          } : ad
         )
       );
+
+      // If Supabase failed, persist the change locally
+      if (!supabaseSuccess) {
+        const persistedChanges = loadPersistedChanges();
+        persistedChanges[id] = { status: 'rejected', rejectionReason: reason };
+        savePersistedChanges(persistedChanges);
+        console.log('💾 Saved rejection to localStorage for persistence');
+      }
+
+      console.log('✅ Classified rejected successfully');
     } catch (error) {
       console.error('❌ Error rejecting classified:', error);
       throw new Error('Failed to reject classified');
