@@ -30,6 +30,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
+  const [localUpdateCount, setLocalUpdateCount] = useState(0);
 
   // Initialize component safely
   useEffect(() => {
@@ -38,12 +39,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Auto-refresh content when lastUpdate changes
+  // Force re-render when classifieds change
   useEffect(() => {
-    if (lastUpdate && activeTab === 'content') {
-      console.log('🔄 Content updated, refreshing view');
+    if (lastUpdate) {
+      console.log('🔄 Classifieds updated, forcing re-render');
+      setLocalUpdateCount(prev => prev + 1);
     }
-  }, [lastUpdate, activeTab]);
+  }, [lastUpdate, classifieds]);
 
   // Check what permissions the user has
   const canManageUsers = user ? hasPermission('manage_roles') : false;
@@ -54,8 +56,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const safeClassifieds = Array.isArray(classifieds) ? classifieds : [];
   const safeUsers = Array.isArray(users) ? users : [];
 
-  // Filter pending content items safely
+  // Filter pending content items safely - recalculate on every render
   const pendingClassifieds = safeClassifieds.filter(ad => ad && ad.status === 'pending');
+  const approvedClassifieds = safeClassifieds.filter(ad => ad && ad.status === 'approved');
+  const rejectedClassifieds = safeClassifieds.filter(ad => ad && ad.status === 'rejected');
+  
+  console.log('📊 Current counts:', {
+    total: safeClassifieds.length,
+    pending: pendingClassifieds.length,
+    approved: approvedClassifieds.length,
+    rejected: rejectedClassifieds.length,
+    localUpdateCount
+  });
+
   const allContentItems = safeClassifieds.filter(ad => {
     if (!ad) return false;
     
@@ -96,20 +109,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     try {
       await refetch();
       console.log('✅ Content refreshed successfully');
+      setLocalUpdateCount(prev => prev + 1);
       
       // Show success notification
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-      notification.textContent = '🔄 Content refreshed successfully!';
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        if (document.body.contains(notification)) {
-          document.body.removeChild(notification);
-        }
-      }, 3000);
+      showNotification('🔄 Content refreshed successfully!', 'success');
     } catch (error) {
       console.error('❌ Failed to refresh content:', error);
+      showNotification('❌ Failed to refresh content', 'error');
     } finally {
       setIsRefreshing(false);
     }
@@ -127,8 +133,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
       
       await approveClassified(itemId);
       console.log('✅ Item approved successfully from admin panel');
+      
+      // Force immediate re-render
+      setLocalUpdateCount(prev => prev + 1);
+      
+      showNotification('✅ Item approved successfully!', 'success');
     } catch (error) {
       console.error('❌ Error approving item:', error);
+      showNotification('❌ Failed to approve item', 'error');
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -153,8 +165,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
       
       await rejectClassified(itemId, reason || 'No reason provided');
       console.log('✅ Item rejected successfully from admin panel');
+      
+      // Force immediate re-render
+      setLocalUpdateCount(prev => prev + 1);
+      
+      showNotification('✅ Item rejected successfully!', 'warning');
     } catch (error) {
       console.error('❌ Error rejecting item:', error);
+      showNotification('❌ Failed to reject item', 'error');
     } finally {
       setProcessingItems(prev => {
         const newSet = new Set(prev);
@@ -167,31 +185,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const handleBulkApprove = async () => {
     const pendingItems = pendingClassifieds.slice(0, 5); // Approve first 5 pending items
     if (pendingItems.length === 0) {
-      alert('No pending items to approve.');
+      showNotification('ℹ️ No pending items to approve', 'warning');
       return;
     }
 
     if (confirm(`Are you sure you want to approve ${pendingItems.length} pending items?`)) {
       try {
+        let successCount = 0;
         for (const item of pendingItems) {
-          await approveClassified(item.id);
-          // Small delay to prevent overwhelming the system
-          await new Promise(resolve => setTimeout(resolve, 100));
+          try {
+            await approveClassified(item.id);
+            successCount++;
+            // Small delay to prevent overwhelming the system
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error('❌ Failed to approve item:', item.id, error);
+          }
         }
         
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-        notification.textContent = `✅ Approved ${pendingItems.length} items successfully!`;
-        document.body.appendChild(notification);
+        // Force immediate re-render
+        setLocalUpdateCount(prev => prev + 1);
         
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification);
-          }
-        }, 3000);
+        showNotification(`✅ Approved ${successCount}/${pendingItems.length} items successfully!`, 'success');
       } catch (error) {
         console.error('❌ Error in bulk approve:', error);
-        alert('Some items failed to approve. Please try again.');
+        showNotification('❌ Some items failed to approve', 'error');
       }
     }
   };
@@ -199,37 +217,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const handleClearCache = () => {
     if (confirm('Are you sure you want to clear all cached approval/rejection data? This will reset all pending items to their original state.')) {
       clearPersistedChanges();
-      
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-      notification.textContent = '🗑️ Cache cleared successfully!';
-      document.body.appendChild(notification);
-      
+      setLocalUpdateCount(prev => prev + 1);
+      showNotification('🗑️ Cache cleared successfully!', 'success');
+    }
+  };
+
+  // Helper function to show notifications
+  const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-orange-500';
+    notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300`;
+    notification.textContent = message;
+    notification.style.transform = 'translateX(100%)';
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Animate out and remove
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
       setTimeout(() => {
         if (document.body.contains(notification)) {
           document.body.removeChild(notification);
         }
-      }, 3000);
-    }
+      }, 300);
+    }, 3000);
   };
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
       await updateUserRole(userId, newRole as any);
-      alert('User role updated successfully!');
+      showNotification('✅ User role updated successfully!', 'success');
     } catch (error) {
       console.error('Error updating user role:', error);
-      alert('Failed to update user role. Please try again.');
+      showNotification('❌ Failed to update user role', 'error');
     }
   };
 
   const handleUserStatusToggle = async (userId: string, isActive: boolean) => {
     try {
       await updateUserStatus(userId, !isActive);
-      alert(`User ${!isActive ? 'activated' : 'deactivated'} successfully!`);
+      showNotification(`✅ User ${!isActive ? 'activated' : 'deactivated'} successfully!`, 'success');
     } catch (error) {
       console.error('Error updating user status:', error);
-      alert('Failed to update user status. Please try again.');
+      showNotification('❌ Failed to update user status', 'error');
     }
   };
 
@@ -237,17 +272,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
         await deleteUser(userId);
-        alert('User deleted successfully!');
+        showNotification('✅ User deleted successfully!', 'success');
       } catch (error) {
         console.error('Error deleting user:', error);
-        alert('Failed to delete user. Please try again.');
+        showNotification('❌ Failed to delete user', 'error');
       }
     }
   };
 
   const handleBulkUserAction = async (action: string) => {
     if (selectedUsers.length === 0) {
-      alert('Please select users first.');
+      showNotification('ℹ️ Please select users first', 'warning');
       return;
     }
 
@@ -267,10 +302,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
           }
         }
         setSelectedUsers([]);
-        alert(`Successfully ${action}d ${selectedUsers.length} users.`);
+        showNotification(`✅ Successfully ${action}d ${selectedUsers.length} users`, 'success');
       } catch (error) {
         console.error(`Error ${action}ing users:`, error);
-        alert(`Failed to ${action} users. Please try again.`);
+        showNotification(`❌ Failed to ${action} users`, 'error');
       }
     }
   };
@@ -398,7 +433,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     title="Bulk Approve Pending Items"
                   >
                     <Zap className="w-4 h-4" />
-                    <span>Bulk Approve</span>
+                    <span>Bulk Approve ({pendingClassifieds.length})</span>
                   </button>
                 )}
                 <button
@@ -449,7 +484,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                   <FileText className="w-5 h-5" />
                   <span>Content Review</span>
                   {pendingClassifieds.length > 0 && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
                       {pendingClassifieds.length}
                     </span>
                   )}
@@ -513,17 +548,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Debug Info */}
+            {/* Real-time Debug Info */}
             {activeTab === 'content' && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-xs font-medium text-blue-900 mb-2">Debug Info</h4>
+                <h4 className="text-xs font-medium text-blue-900 mb-2">📊 Live Stats</h4>
                 <div className="space-y-1 text-xs text-blue-800">
-                  <div>Total: {safeClassifieds.length}</div>
-                  <div>Pending: {pendingClassifieds.length}</div>
-                  <div>Approved: {safeClassifieds.filter(c => c?.status === 'approved').length}</div>
-                  <div>Rejected: {safeClassifieds.filter(c => c?.status === 'rejected').length}</div>
-                  <div>Last Update: {lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : 'Never'}</div>
-                  <div>Processing: {processingItems.size}</div>
+                  <div className="flex justify-between">
+                    <span>Total:</span>
+                    <span className="font-bold">{safeClassifieds.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pending:</span>
+                    <span className="font-bold text-orange-600">{pendingClassifieds.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Approved:</span>
+                    <span className="font-bold text-green-600">{approvedClassifieds.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rejected:</span>
+                    <span className="font-bold text-red-600">{rejectedClassifieds.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Processing:</span>
+                    <span className="font-bold">{processingItems.size}</span>
+                  </div>
+                  <div className="text-xs text-blue-600 mt-2 pt-2 border-t border-blue-200">
+                    Last Update: {lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : 'Never'}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    Renders: {localUpdateCount}
+                  </div>
                 </div>
               </div>
             )}
@@ -539,11 +594,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
                       {pendingClassifieds.length} pending
                     </span>
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {approvedClassifieds.length} approved
+                    </span>
+                    <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {rejectedClassifieds.length} rejected
+                    </span>
                     <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                       {safeClassifieds.length} total
                     </span>
                     {lastUpdate && (
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
                         Updated: {new Date(lastUpdate).toLocaleTimeString()}
                       </span>
                     )}
@@ -568,11 +629,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                       onChange={(e) => setContentStatusFilter(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     >
-                      <option value="all">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="expired">Expired</option>
+                      <option value="all">All Status ({safeClassifieds.length})</option>
+                      <option value="pending">Pending ({pendingClassifieds.length})</option>
+                      <option value="approved">Approved ({approvedClassifieds.length})</option>
+                      <option value="rejected">Rejected ({rejectedClassifieds.length})</option>
                     </select>
                   </div>
                 </div>
@@ -638,7 +698,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <CheckCircle className="w-4 h-4" />
-                                  <span>Approve</span>
+                                  <span>{processingItems.has(item.id) ? 'Processing...' : 'Approve'}</span>
                                 </button>
                                 <button
                                   onClick={() => handleReject(item.id)}
@@ -646,7 +706,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                   className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <X className="w-4 h-4" />
-                                  <span>Reject</span>
+                                  <span>{processingItems.has(item.id) ? 'Processing...' : 'Reject'}</span>
                                 </button>
                               </>
                             )}
@@ -678,7 +738,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* Other tabs remain the same... */}
+            {/* Overview Tab */}
             {activeTab === 'overview' && canAccessOverview && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900">Dashboard Overview</h3>
@@ -745,9 +805,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-green-600 text-sm font-medium">Approved</p>
-                            <p className="text-3xl font-bold text-green-900">
-                              {safeClassifieds.filter(c => c && c.status === 'approved').length}
-                            </p>
+                            <p className="text-3xl font-bold text-green-900">{approvedClassifieds.length}</p>
                           </div>
                           <CheckCircle className="w-8 h-8 text-green-600" />
                         </div>
