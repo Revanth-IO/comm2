@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X } from 'lucide-react';
+import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { useClassifieds } from '../hooks/useClassifieds';
 
 const ClassifiedsSection: React.FC = () => {
@@ -11,6 +11,10 @@ const ClassifiedsSection: React.FC = () => {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [locationFilter, setLocationFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  
+  // Pagination state
+  const [displayCount, setDisplayCount] = useState(6); // Show 6 initially
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const categories = ['All', 'For Sale', 'Housing', 'Jobs', 'Services', 'Community'];
   const locations = ['All Locations', 'PA', 'NJ', 'DE', 'Philadelphia, PA', 'Jersey City, NJ', 'Wilmington, DE', 'Newark, DE', 'Edison, NJ'];
@@ -30,6 +34,11 @@ const ClassifiedsSection: React.FC = () => {
       window.removeEventListener('headerSearch', handleHeaderSearch as EventListener);
     };
   }, []);
+
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(6);
+  }, [searchTerm, selectedCategory, sortBy, priceRange, locationFilter, dateFilter]);
 
   const filteredClassifieds = classifieds.filter(ad => {
     const matchesSearch = ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,6 +90,20 @@ const ClassifiedsSection: React.FC = () => {
     }
   });
 
+  // Get the classifieds to display (with pagination)
+  const displayedClassifieds = sortedClassifieds.slice(0, displayCount);
+  const hasMoreToLoad = displayCount < sortedClassifieds.length;
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    
+    // Simulate loading delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setDisplayCount(prev => Math.min(prev + 6, sortedClassifieds.length));
+    setIsLoadingMore(false);
+  };
+
   const clearAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory('All');
@@ -89,6 +112,7 @@ const ClassifiedsSection: React.FC = () => {
     setLocationFilter('');
     setDateFilter('all');
     setShowAdvancedFilters(false);
+    setDisplayCount(6);
   };
 
   const formatPrice = (price?: number) => {
@@ -147,7 +171,10 @@ const ClassifiedsSection: React.FC = () => {
                 ✅ Database Connected
               </div>
               <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                📊 {classifieds.length} Total Ads
+                📊 {classifieds.filter(ad => ad.status === 'approved').length} Published Ads
+              </div>
+              <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                📝 {classifieds.length} Total Ads
               </div>
               <div className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
                 🔄 Real-time Updates
@@ -292,7 +319,7 @@ const ClassifiedsSection: React.FC = () => {
           {/* Results Summary */}
           <div className="flex items-center justify-between text-sm text-gray-600 mt-4 pt-4 border-t border-gray-200">
             <span>
-              Showing {sortedClassifieds.length} of {filteredClassifieds.length} results
+              Showing {displayedClassifieds.length} of {sortedClassifieds.length} results
               {searchTerm && ` for "${searchTerm}"`}
             </span>
             {sortedClassifieds.length !== classifieds.filter(ad => ad.status === 'approved').length && (
@@ -315,7 +342,7 @@ const ClassifiedsSection: React.FC = () => {
         {/* Results */}
         {!isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedClassifieds.map((ad) => (
+            {displayedClassifieds.map((ad) => (
               <div key={ad.id} className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group ${ad.featured ? 'ring-2 ring-orange-200' : ''}`}>
                 {ad.featured && (
                   <div className="bg-gradient-to-r from-orange-600 to-orange-700 text-white text-xs font-semibold px-3 py-1 text-center">
@@ -413,11 +440,53 @@ const ClassifiedsSection: React.FC = () => {
           </div>
         )}
 
-        {!isLoading && sortedClassifieds.length > 0 && (
+        {/* Load More Button */}
+        {!isLoading && hasMoreToLoad && (
           <div className="text-center mt-12">
-            <button className="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 transition-colors duration-200 shadow-lg">
-              Load More Classifieds
+            <div className="mb-4">
+              <p className="text-gray-600 text-sm">
+                Showing {displayedClassifieds.length} of {sortedClassifieds.length} classifieds
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2 max-w-md mx-auto">
+                <div 
+                  className="bg-orange-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(displayedClassifieds.length / sortedClassifieds.length) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <button 
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Loading More...</span>
+                </>
+              ) : (
+                <>
+                  <span>Load More Classifieds</span>
+                  <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                    +{Math.min(6, sortedClassifieds.length - displayedClassifieds.length)}
+                  </span>
+                </>
+              )}
             </button>
+          </div>
+        )}
+
+        {/* All Loaded Message */}
+        {!isLoading && !hasMoreToLoad && sortedClassifieds.length > 6 && (
+          <div className="text-center mt-12">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
+              <p className="text-green-800 font-medium">
+                ✅ All {sortedClassifieds.length} classifieds loaded!
+              </p>
+              <p className="text-green-600 text-sm mt-1">
+                You've reached the end of the results.
+              </p>
+            </div>
           </div>
         )}
       </div>
