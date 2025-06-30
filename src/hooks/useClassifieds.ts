@@ -21,10 +21,10 @@ export const useClassifieds = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock data fallback
+  // Mock data fallback with valid UUIDs
   const mockClassifieds: ClassifiedAd[] = [
     {
-      id: '1',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       title: 'iPhone 14 Pro Max - Excellent Condition',
       description: 'Barely used iPhone 14 Pro Max, 256GB, Space Black. Includes original box, charger, and screen protector. No scratches or damage.',
       category: 'For Sale',
@@ -38,7 +38,7 @@ export const useClassifieds = () => {
       },
       images: ['https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
       status: 'approved',
-      authorId: '1',
+      authorId: '550e8400-e29b-41d4-a716-446655440011',
       authorName: 'Raj Patel',
       createdAt: '2024-01-15T10:00:00Z',
       updatedAt: '2024-01-15T10:00:00Z',
@@ -46,7 +46,7 @@ export const useClassifieds = () => {
       featured: true
     },
     {
-      id: '2',
+      id: '550e8400-e29b-41d4-a716-446655440002',
       title: '2BR Apartment for Rent - Jersey City',
       description: 'Beautiful 2-bedroom apartment in prime Jersey City location. Close to PATH train, grocery stores, and restaurants. Parking included.',
       category: 'Housing',
@@ -60,7 +60,7 @@ export const useClassifieds = () => {
       },
       images: ['https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
       status: 'approved',
-      authorId: '2',
+      authorId: '550e8400-e29b-41d4-a716-446655440012',
       authorName: 'Priya Sharma',
       createdAt: '2024-01-14T15:30:00Z',
       updatedAt: '2024-01-14T15:30:00Z',
@@ -68,7 +68,7 @@ export const useClassifieds = () => {
       featured: false
     },
     {
-      id: '3',
+      id: '550e8400-e29b-41d4-a716-446655440003',
       title: 'Math Tutoring Services - All Levels',
       description: 'Experienced math tutor offering personalized lessons for students from elementary to college level. Specializing in SAT/ACT prep.',
       category: 'Services',
@@ -82,7 +82,7 @@ export const useClassifieds = () => {
       },
       images: ['https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
       status: 'approved',
-      authorId: '3',
+      authorId: '550e8400-e29b-41d4-a716-446655440013',
       authorName: 'Dr. Amit Kumar',
       createdAt: '2024-01-13T09:15:00Z',
       updatedAt: '2024-01-13T09:15:00Z',
@@ -90,7 +90,7 @@ export const useClassifieds = () => {
       featured: false
     },
     {
-      id: '4',
+      id: '550e8400-e29b-41d4-a716-446655440004',
       title: 'Software Engineer Position - Remote',
       description: 'Looking for experienced React developer for remote position. Competitive salary and benefits.',
       category: 'Jobs',
@@ -103,7 +103,7 @@ export const useClassifieds = () => {
       },
       images: ['https://images.pexels.com/photos/3182834/pexels-photo-3182834.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
       status: 'pending',
-      authorId: '4',
+      authorId: '550e8400-e29b-41d4-a716-446655440014',
       authorName: 'HR Team',
       createdAt: '2024-01-16T14:20:00Z',
       updatedAt: '2024-01-16T14:20:00Z',
@@ -111,7 +111,7 @@ export const useClassifieds = () => {
       featured: false
     },
     {
-      id: '5',
+      id: '550e8400-e29b-41d4-a716-446655440005',
       title: 'Wedding Photography Services',
       description: 'Professional wedding photographer with 10+ years experience. Packages starting from $1500.',
       category: 'Services',
@@ -125,7 +125,7 @@ export const useClassifieds = () => {
       },
       images: ['https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop'],
       status: 'pending',
-      authorId: '5',
+      authorId: '550e8400-e29b-41d4-a716-446655440015',
       authorName: 'Sarah Johnson',
       createdAt: '2024-01-17T11:45:00Z',
       updatedAt: '2024-01-17T11:45:00Z',
@@ -232,7 +232,7 @@ export const useClassifieds = () => {
         
         // Create mock classified for local state
         const newClassified: ClassifiedAd = {
-          id: Date.now().toString(),
+          id: crypto.randomUUID(),
           title: data.title,
           description: data.description,
           category: data.category,
@@ -242,7 +242,7 @@ export const useClassifieds = () => {
           contactInfo: data.contactInfo,
           images: data.images,
           status: 'pending',
-          authorId: 'guest_' + Date.now(),
+          authorId: crypto.randomUUID(),
           authorName: data.contactInfo.name,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -289,7 +289,7 @@ export const useClassifieds = () => {
         
         // Fall back to local creation
         const newClassified: ClassifiedAd = {
-          id: Date.now().toString(),
+          id: crypto.randomUUID(),
           title: data.title,
           description: data.description,
           category: data.category,
@@ -299,7 +299,7 @@ export const useClassifieds = () => {
           contactInfo: data.contactInfo,
           images: data.images,
           status: 'pending',
-          authorId: 'guest_' + Date.now(),
+          authorId: crypto.randomUUID(),
           authorName: data.contactInfo.name,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
