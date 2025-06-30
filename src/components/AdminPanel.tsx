@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Shield, Users, FileText, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Eye, Edit, Trash2, UserCheck, UserX, Ban, Mail, Phone, MapPin, Calendar, Search, Filter, MoreVertical } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers } from '../hooks/useUsers';
@@ -27,36 +27,57 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [contentStatusFilter, setContentStatusFilter] = useState('pending');
   const [showUserActions, setShowUserActions] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize component safely
+  useEffect(() => {
+    if (isOpen) {
+      setIsInitialized(true);
+    }
+  }, [isOpen]);
 
   // Check what permissions the user has
-  const canManageUsers = hasPermission('manage_roles');
-  const canReviewContent = hasPermission('approve_content');
+  const canManageUsers = user ? hasPermission('manage_roles') : false;
+  const canReviewContent = user ? hasPermission('approve_content') : false;
   const canAccessOverview = canManageUsers || canReviewContent;
 
-  // Filter pending content items
-  const pendingClassifieds = classifieds.filter(ad => ad.status === 'pending');
-  const allContentItems = classifieds.filter(ad => {
-    const matchesSearch = ad.title.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
-                         ad.description.toLowerCase().includes(contentSearchTerm.toLowerCase());
+  // Safe array operations with fallbacks
+  const safeClassifieds = Array.isArray(classifieds) ? classifieds : [];
+  const safeUsers = Array.isArray(users) ? users : [];
+
+  // Filter pending content items safely
+  const pendingClassifieds = safeClassifieds.filter(ad => ad && ad.status === 'pending');
+  const allContentItems = safeClassifieds.filter(ad => {
+    if (!ad) return false;
+    
+    const matchesSearch = (ad.title || '').toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
+                         (ad.description || '').toLowerCase().includes(contentSearchTerm.toLowerCase());
     const matchesStatus = contentStatusFilter === 'all' || ad.status === contentStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Filter users
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                         u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+  // Filter users safely
+  const filteredUsers = safeUsers.filter(u => {
+    if (!u) return false;
+    
+    const matchesSearch = (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                         (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase());
     const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
     return matchesSearch && matchesRole;
   });
 
   const userStats: UserStats = {
-    totalUsers: users.length,
-    activeUsers: users.filter(u => u.isActive).length,
-    newThisWeek: users.filter(u => {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return new Date(u.createdAt) > weekAgo;
+    totalUsers: safeUsers.length,
+    activeUsers: safeUsers.filter(u => u && u.isActive).length,
+    newThisWeek: safeUsers.filter(u => {
+      if (!u || !u.createdAt) return false;
+      try {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return new Date(u.createdAt) > weekAgo;
+      } catch {
+        return false;
+      }
     }).length,
     pendingApprovals: pendingClassifieds.length
   };
@@ -64,8 +85,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const handleApprove = async (itemId: string) => {
     try {
       await approveClassified(itemId);
-      alert(`Item ${itemId} approved successfully!`);
+      alert(`Item approved successfully!`);
     } catch (error) {
+      console.error('Error approving item:', error);
       alert('Failed to approve item. Please try again.');
     }
   };
@@ -74,8 +96,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const reason = prompt('Reason for rejection (optional):');
     try {
       await rejectClassified(itemId, reason || 'No reason provided');
-      alert(`Item ${itemId} rejected.`);
+      alert(`Item rejected.`);
     } catch (error) {
+      console.error('Error rejecting item:', error);
       alert('Failed to reject item. Please try again.');
     }
   };
@@ -85,6 +108,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
       await updateUserRole(userId, newRole as any);
       alert('User role updated successfully!');
     } catch (error) {
+      console.error('Error updating user role:', error);
       alert('Failed to update user role. Please try again.');
     }
   };
@@ -94,6 +118,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
       await updateUserStatus(userId, !isActive);
       alert(`User ${!isActive ? 'activated' : 'deactivated'} successfully!`);
     } catch (error) {
+      console.error('Error updating user status:', error);
       alert('Failed to update user status. Please try again.');
     }
   };
@@ -104,6 +129,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         await deleteUser(userId);
         alert('User deleted successfully!');
       } catch (error) {
+        console.error('Error deleting user:', error);
         alert('Failed to delete user. Please try again.');
       }
     }
@@ -133,21 +159,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         setSelectedUsers([]);
         alert(`Successfully ${action}d ${selectedUsers.length} users.`);
       } catch (error) {
+        console.error(`Error ${action}ing users:`, error);
         alert(`Failed to ${action} users. Please try again.`);
       }
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    const diffDays = Math.ceil(diffHours / 24);
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
+    try {
+      if (!dateString) return 'Unknown';
+      
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+      
+      if (diffHours < 24) return `${diffHours} hours ago`;
+      const diffDays = Math.ceil(diffHours / 24);
+      if (diffDays < 7) return `${diffDays} days ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return 'Unknown';
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -180,10 +215,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen) return null;
+  // Close user actions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserActions(null);
+    };
+
+    if (showUserActions) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserActions]);
+
+  if (!isOpen || !isInitialized) return null;
 
   // Check permissions - allow access if user can review content OR manage roles
-  if (!user || (!canAccessOverview)) {
+  if (!user || !canAccessOverview) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center">
@@ -280,7 +327,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                   <Users className="w-5 h-5" />
                   <span>User Management</span>
                   <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                    {users.length}
+                    {safeUsers.length}
                   </span>
                 </button>
               )}
@@ -384,7 +431,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-blue-600 text-sm font-medium">Total Content</p>
-                            <p className="text-3xl font-bold text-blue-900">{classifieds.length}</p>
+                            <p className="text-3xl font-bold text-blue-900">{safeClassifieds.length}</p>
                           </div>
                           <FileText className="w-8 h-8 text-blue-600" />
                         </div>
@@ -395,7 +442,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                           <div>
                             <p className="text-green-600 text-sm font-medium">Approved</p>
                             <p className="text-3xl font-bold text-green-900">
-                              {classifieds.filter(c => c.status === 'approved').length}
+                              {safeClassifieds.filter(c => c && c.status === 'approved').length}
                             </p>
                           </div>
                           <CheckCircle className="w-8 h-8 text-green-600" />
@@ -410,24 +457,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h4>
                   <div className="space-y-3">
                     {canManageUsers ? (
-                      users.slice(0, 5).map((user, index) => (
-                        <div key={user.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      safeUsers.slice(0, 5).map((user, index) => (
+                        <div key={user?.id || index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm text-gray-700">New user registration: {user.email}</span>
-                          <span className="text-xs text-gray-500 ml-auto">{formatDate(user.createdAt)}</span>
+                          <span className="text-sm text-gray-700">New user registration: {user?.email || 'Unknown'}</span>
+                          <span className="text-xs text-gray-500 ml-auto">{formatDate(user?.createdAt || '')}</span>
                         </div>
                       ))
                     ) : (
-                      classifieds.slice(0, 5).map((ad, index) => (
-                        <div key={ad.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      safeClassifieds.slice(0, 5).map((ad, index) => (
+                        <div key={ad?.id || index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                           <div className={`w-2 h-2 rounded-full ${
-                            ad.status === 'pending' ? 'bg-yellow-500' : 
-                            ad.status === 'approved' ? 'bg-green-500' : 'bg-red-500'
+                            ad?.status === 'pending' ? 'bg-yellow-500' : 
+                            ad?.status === 'approved' ? 'bg-green-500' : 'bg-red-500'
                           }`}></div>
                           <span className="text-sm text-gray-700">
-                            {ad.status === 'pending' ? 'New' : ad.status.charAt(0).toUpperCase() + ad.status.slice(1)} classified: {ad.title}
+                            {ad?.status === 'pending' ? 'New' : (ad?.status || 'unknown').charAt(0).toUpperCase() + (ad?.status || 'unknown').slice(1)} classified: {ad?.title || 'Untitled'}
                           </span>
-                          <span className="text-xs text-gray-500 ml-auto">{formatDate(ad.createdAt)}</span>
+                          <span className="text-xs text-gray-500 ml-auto">{formatDate(ad?.createdAt || '')}</span>
                         </div>
                       ))
                     )}
@@ -445,7 +492,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                       {pendingClassifieds.length} pending
                     </span>
                     <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {classifieds.length} total
+                      {safeClassifieds.length} total
                     </span>
                   </div>
                 </div>
@@ -485,38 +532,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 ) : (
                   <div className="space-y-4">
                     {allContentItems.map((item) => (
-                      <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-6">
+                      <div key={item?.id || Math.random()} className="bg-white rounded-xl border border-gray-200 p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-2">
                               <span className="text-2xl">🏷️</span>
-                              <h4 className="text-lg font-semibold text-gray-900">{item.title}</h4>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                                {item.status}
+                              <h4 className="text-lg font-semibold text-gray-900">{item?.title || 'Untitled'}</h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item?.status || 'unknown')}`}>
+                                {item?.status || 'unknown'}
                               </span>
-                              {item.featured && (
+                              {item?.featured && (
                                 <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
                                   Featured
                                 </span>
                               )}
                             </div>
-                            <p className="text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                            <p className="text-gray-600 mb-3 line-clamp-2">{item?.description || 'No description'}</p>
                             <div className="flex items-center space-x-4 text-sm text-gray-600">
-                              <span>By: {item.authorName}</span>
+                              <span>By: {item?.authorName || 'Unknown'}</span>
                               <span>•</span>
-                              <span>Category: {item.category}</span>
+                              <span>Category: {item?.category || 'Unknown'}</span>
                               <span>•</span>
-                              <span>Location: {item.location}</span>
+                              <span>Location: {item?.location || 'Unknown'}</span>
                               <span>•</span>
-                              <span>Created: {formatDate(item.createdAt)}</span>
-                              {item.price && (
+                              <span>Created: {formatDate(item?.createdAt || '')}</span>
+                              {item?.price && (
                                 <>
                                   <span>•</span>
                                   <span className="font-medium text-green-600">${item.price}</span>
                                 </>
                               )}
                             </div>
-                            {item.rejectionReason && (
+                            {item?.rejectionReason && (
                               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-red-800 text-sm">
                                   <strong>Rejection Reason:</strong> {item.rejectionReason}
@@ -525,7 +572,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                             )}
                           </div>
                           <div className="flex items-center space-x-2 ml-4">
-                            {item.status === 'pending' && (
+                            {item?.status === 'pending' && (
                               <>
                                 <button
                                   onClick={() => handleApprove(item.id)}
@@ -647,7 +694,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedUsers(filteredUsers.map(u => u.id));
+                                    setSelectedUsers(filteredUsers.map(u => u?.id).filter(Boolean));
                                   } else {
                                     setSelectedUsers([]);
                                   }
@@ -674,12 +721,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {filteredUsers.map((user) => (
-                            <tr key={user.id} className="hover:bg-gray-50">
+                            <tr key={user?.id || Math.random()} className="hover:bg-gray-50">
                               <td className="px-6 py-4">
                                 <input
                                   type="checkbox"
-                                  checked={selectedUsers.includes(user.id)}
+                                  checked={selectedUsers.includes(user?.id || '')}
                                   onChange={(e) => {
+                                    if (!user?.id) return;
                                     if (e.target.checked) {
                                       setSelectedUsers([...selectedUsers, user.id]);
                                     } else {
@@ -693,42 +741,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 <div className="flex items-center">
                                   <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
                                     <span className="text-white font-semibold text-sm">
-                                      {user.name.charAt(0).toUpperCase()}
+                                      {(user?.name || 'U').charAt(0).toUpperCase()}
                                     </span>
                                   </div>
                                   <div className="ml-4">
-                                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                                    <div className="text-sm text-gray-500">{user.email}</div>
+                                    <div className="text-sm font-medium text-gray-900">{user?.name || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">{user?.email || 'No email'}</div>
                                   </div>
                                 </div>
                               </td>
                               <td className="px-6 py-4">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                                  {user.role.replace('_', ' ')}
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user?.role || 'user')}`}>
+                                  {(user?.role || 'user').replace('_', ' ')}
                                 </span>
                               </td>
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  user.isActive 
+                                  user?.isActive 
                                     ? 'text-green-600 bg-green-100' 
                                     : 'text-red-600 bg-red-100'
                                 }`}>
-                                  {user.isActive ? 'Active' : 'Inactive'}
+                                  {user?.isActive ? 'Active' : 'Inactive'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500">
-                                {formatDate(user.createdAt)}
+                                {formatDate(user?.createdAt || '')}
                               </td>
                               <td className="px-6 py-4">
                                 <div className="relative">
                                   <button
-                                    onClick={() => setShowUserActions(showUserActions === user.id ? null : user.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowUserActions(showUserActions === user?.id ? null : user?.id || null);
+                                    }}
                                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                                   >
                                     <MoreVertical className="w-4 h-4 text-gray-500" />
                                   </button>
                                   
-                                  {showUserActions === user.id && (
+                                  {showUserActions === user?.id && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
                                       <div className="px-4 py-2 border-b border-gray-200">
                                         <p className="text-sm font-medium text-gray-900">Change Role</p>
@@ -737,8 +788,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         <button
                                           key={role}
                                           onClick={() => {
-                                            handleUserRoleChange(user.id, role);
-                                            setShowUserActions(null);
+                                            if (user?.id) {
+                                              handleUserRoleChange(user.id, role);
+                                              setShowUserActions(null);
+                                            }
                                           }}
                                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                         >
@@ -748,18 +801,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                       <div className="border-t border-gray-200 mt-2 pt-2">
                                         <button
                                           onClick={() => {
-                                            handleUserStatusToggle(user.id, user.isActive);
-                                            setShowUserActions(null);
+                                            if (user?.id) {
+                                              handleUserStatusToggle(user.id, user.isActive);
+                                              setShowUserActions(null);
+                                            }
                                           }}
                                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                                         >
-                                          {user.isActive ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                                          <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
+                                          {user?.isActive ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                          <span>{user?.isActive ? 'Deactivate' : 'Activate'}</span>
                                         </button>
                                         <button
                                           onClick={() => {
-                                            handleDeleteUser(user.id);
-                                            setShowUserActions(null);
+                                            if (user?.id) {
+                                              handleDeleteUser(user.id);
+                                              setShowUserActions(null);
+                                            }
                                           }}
                                           className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
                                         >
