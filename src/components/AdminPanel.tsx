@@ -28,6 +28,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const [contentStatusFilter, setContentStatusFilter] = useState('pending');
   const [showUserActions, setShowUserActions] = useState<string | null>(null);
 
+  // Check what permissions the user has
+  const canManageUsers = hasPermission('manage_roles');
+  const canReviewContent = hasPermission('approve_content');
+  const canAccessOverview = canManageUsers || canReviewContent;
+
   // Filter pending content items
   const pendingClassifieds = classifieds.filter(ad => ad.status === 'pending');
   const allContentItems = classifieds.filter(ad => {
@@ -177,8 +182,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // Check permissions
-  if (!user || !hasPermission('manage_roles')) {
+  // Check permissions - allow access if user can review content OR manage roles
+  if (!user || (!canAccessOverview)) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center">
@@ -186,7 +191,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-4">Access Denied</h3>
-          <p className="text-gray-600 mb-6">You don't have permission to access the admin panel.</p>
+          <p className="text-gray-600 mb-6">
+            You don't have permission to access the admin panel. You need either content review or user management permissions.
+          </p>
           <button
             onClick={onClose}
             className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200"
@@ -208,8 +215,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Admin Panel</h2>
-              <p className="text-red-100">Upkaar Community Management</p>
+              <h2 className="text-2xl font-bold">
+                {canManageUsers ? 'Admin Panel' : 'Moderator Panel'}
+              </h2>
+              <p className="text-red-100">
+                {canManageUsers ? 'Upkaar Community Management' : 'Content Review & Moderation'}
+              </p>
             </div>
           </div>
           <button
@@ -224,101 +235,138 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
           {/* Sidebar */}
           <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
             <div className="space-y-2">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
-                  activeTab === 'overview' 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span>Overview</span>
-              </button>
+              {canAccessOverview && (
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
+                    activeTab === 'overview' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <BarChart3 className="w-5 h-5" />
+                  <span>Overview</span>
+                </button>
+              )}
               
-              <button
-                onClick={() => setActiveTab('content')}
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
-                  activeTab === 'content' 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <FileText className="w-5 h-5" />
-                <span>Content Review</span>
-                {pendingClassifieds.length > 0 && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {pendingClassifieds.length}
+              {canReviewContent && (
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
+                    activeTab === 'content' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <FileText className="w-5 h-5" />
+                  <span>Content Review</span>
+                  {pendingClassifieds.length > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      {pendingClassifieds.length}
+                    </span>
+                  )}
+                </button>
+              )}
+              
+              {canManageUsers && (
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
+                    activeTab === 'users' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Users className="w-5 h-5" />
+                  <span>User Management</span>
+                  <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                    {users.length}
                   </span>
+                </button>
+              )}
+              
+              {canManageUsers && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
+                    activeTab === 'settings' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Settings className="w-5 h-5" />
+                  <span>Settings</span>
+                </button>
+              )}
+            </div>
+
+            {/* User Role Info */}
+            <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Your Permissions</h4>
+              <div className="space-y-1">
+                {canReviewContent && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-gray-700">Content Review</span>
+                  </div>
                 )}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
-                  activeTab === 'users' 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <Users className="w-5 h-5" />
-                <span>User Management</span>
-                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                  {users.length}
-                </span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('settings')}
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-3 ${
-                  activeTab === 'settings' 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <Settings className="w-5 h-5" />
-                <span>Settings</span>
-              </button>
+                {canManageUsers && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-gray-700">User Management</span>
+                  </div>
+                )}
+                {!canManageUsers && !canReviewContent && (
+                  <div className="flex items-center space-x-2">
+                    <X className="w-4 h-4 text-red-600" />
+                    <span className="text-sm text-gray-700">Limited Access</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto p-6">
-            {activeTab === 'overview' && (
+            {activeTab === 'overview' && canAccessOverview && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900">Dashboard Overview</h3>
                 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-blue-600 text-sm font-medium">Total Users</p>
-                        <p className="text-3xl font-bold text-blue-900">{userStats.totalUsers.toLocaleString()}</p>
+                  {canManageUsers && (
+                    <>
+                      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-blue-600 text-sm font-medium">Total Users</p>
+                            <p className="text-3xl font-bold text-blue-900">{userStats.totalUsers.toLocaleString()}</p>
+                          </div>
+                          <Users className="w-8 h-8 text-blue-600" />
+                        </div>
                       </div>
-                      <Users className="w-8 h-8 text-blue-600" />
-                    </div>
-                  </div>
-                  
-                  <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-green-600 text-sm font-medium">Active Users</p>
-                        <p className="text-3xl font-bold text-green-900">{userStats.activeUsers.toLocaleString()}</p>
+                      
+                      <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-green-600 text-sm font-medium">Active Users</p>
+                            <p className="text-3xl font-bold text-green-900">{userStats.activeUsers.toLocaleString()}</p>
+                          </div>
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
                       </div>
-                      <CheckCircle className="w-8 h-8 text-green-600" />
-                    </div>
-                  </div>
-                  
-                  <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-purple-600 text-sm font-medium">New This Week</p>
-                        <p className="text-3xl font-bold text-purple-900">{userStats.newThisWeek}</p>
+                      
+                      <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-purple-600 text-sm font-medium">New This Week</p>
+                            <p className="text-3xl font-bold text-purple-900">{userStats.newThisWeek}</p>
+                          </div>
+                          <BarChart3 className="w-8 h-8 text-purple-600" />
+                        </div>
                       </div>
-                      <BarChart3 className="w-8 h-8 text-purple-600" />
-                    </div>
-                  </div>
+                    </>
+                  )}
                   
                   <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
                     <div className="flex items-center justify-between">
@@ -329,25 +377,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                       <Clock className="w-8 h-8 text-orange-600" />
                     </div>
                   </div>
+
+                  {!canManageUsers && (
+                    <>
+                      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-blue-600 text-sm font-medium">Total Content</p>
+                            <p className="text-3xl font-bold text-blue-900">{classifieds.length}</p>
+                          </div>
+                          <FileText className="w-8 h-8 text-blue-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-green-600 text-sm font-medium">Approved</p>
+                            <p className="text-3xl font-bold text-green-900">
+                              {classifieds.filter(c => c.status === 'approved').length}
+                            </p>
+                          </div>
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Recent Activity */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h4>
                   <div className="space-y-3">
-                    {users.slice(0, 5).map((user, index) => (
-                      <div key={user.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-gray-700">New user registration: {user.email}</span>
-                        <span className="text-xs text-gray-500 ml-auto">{formatDate(user.createdAt)}</span>
-                      </div>
-                    ))}
+                    {canManageUsers ? (
+                      users.slice(0, 5).map((user, index) => (
+                        <div key={user.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-sm text-gray-700">New user registration: {user.email}</span>
+                          <span className="text-xs text-gray-500 ml-auto">{formatDate(user.createdAt)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      classifieds.slice(0, 5).map((ad, index) => (
+                        <div key={ad.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full ${
+                            ad.status === 'pending' ? 'bg-yellow-500' : 
+                            ad.status === 'approved' ? 'bg-green-500' : 'bg-red-500'
+                          }`}></div>
+                          <span className="text-sm text-gray-700">
+                            {ad.status === 'pending' ? 'New' : ad.status.charAt(0).toUpperCase() + ad.status.slice(1)} classified: {ad.title}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-auto">{formatDate(ad.createdAt)}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'content' && (
+            {activeTab === 'content' && canReviewContent && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-gray-900">Content Management</h3>
@@ -482,7 +571,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {activeTab === 'users' && (
+            {activeTab === 'users' && canManageUsers && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-gray-900">User Management</h3>
@@ -700,7 +789,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {activeTab === 'settings' && (
+            {activeTab === 'settings' && canManageUsers && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900">System Settings</h3>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -709,6 +798,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     This would include site settings, email templates, moderation rules, and feature toggles.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Access Denied for specific tabs */}
+            {((activeTab === 'users' && !canManageUsers) || (activeTab === 'settings' && !canManageUsers)) && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Access Denied</h3>
+                <p className="text-gray-600 mb-6">
+                  You don't have permission to access this section. Admin privileges required.
+                </p>
               </div>
             )}
           </div>
