@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, LogOut, Settings, Shield, Plus, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import LoginPrompt from './LoginPrompt';
@@ -8,9 +8,26 @@ const UserMenu: React.FC = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('UserMenu render:', { 
+      user, 
+      isAuthenticated, 
+      userRole: user?.role,
+      canManageRoles: hasPermission('manage_roles'),
+      canApproveContent: hasPermission('approve_content')
+    });
+  }, [user, isAuthenticated, hasPermission]);
+
   const handleLogout = () => {
     logout();
     setShowMenu(false);
+  };
+
+  const handleMenuItemClick = (action: string) => {
+    console.log('Menu item clicked:', action);
+    setShowMenu(false);
+    // In a real app, you would navigate to the appropriate page here
   };
 
   if (!isAuthenticated) {
@@ -61,7 +78,7 @@ const UserMenu: React.FC = () => {
 
           <div className="py-2">
             <button 
-              onClick={() => setShowMenu(false)}
+              onClick={() => handleMenuItemClick('profile')}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
             >
               <User className="w-4 h-4" />
@@ -70,7 +87,7 @@ const UserMenu: React.FC = () => {
 
             {hasPermission('add_classified') && (
               <button 
-                onClick={() => setShowMenu(false)}
+                onClick={() => handleMenuItemClick('listings')}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -80,26 +97,32 @@ const UserMenu: React.FC = () => {
 
             {hasPermission('approve_content') && (
               <button 
-                onClick={() => setShowMenu(false)}
+                onClick={() => handleMenuItemClick('content-review')}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
               >
                 <FileText className="w-4 h-4" />
                 <span>Content Review</span>
+                <span className="ml-auto bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                  Mod
+                </span>
               </button>
             )}
 
             {hasPermission('manage_roles') && (
               <button 
-                onClick={() => setShowMenu(false)}
+                onClick={() => handleMenuItemClick('admin-panel')}
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
               >
                 <Shield className="w-4 h-4" />
                 <span>Admin Panel</span>
+                <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                  Admin
+                </span>
               </button>
             )}
 
             <button 
-              onClick={() => setShowMenu(false)}
+              onClick={() => handleMenuItemClick('settings')}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
             >
               <Settings className="w-4 h-4" />

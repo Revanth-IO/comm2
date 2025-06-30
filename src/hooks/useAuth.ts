@@ -55,6 +55,7 @@ export const useAuth = (): UseAuthReturn => {
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
+        console.log('Restored user from localStorage:', parsedUser);
         setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing saved user:', error);
@@ -68,6 +69,8 @@ export const useAuth = (): UseAuthReturn => {
     setIsLoading(true);
     
     try {
+      console.log('Attempting login for:', email);
+      
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -75,6 +78,7 @@ export const useAuth = (): UseAuthReturn => {
       if (DEMO_PASSWORDS[email] && DEMO_PASSWORDS[email] === password) {
         const foundUser = MOCK_USERS.find(u => u.email === email);
         if (foundUser) {
+          console.log('Login successful for demo user:', foundUser);
           setUser(foundUser);
           localStorage.setItem('currentUser', JSON.stringify(foundUser));
           setIsLoading(false);
@@ -85,6 +89,7 @@ export const useAuth = (): UseAuthReturn => {
       // Check if user exists in mock data (for any password in demo mode)
       const foundUser = MOCK_USERS.find(u => u.email === email);
       if (foundUser) {
+        console.log('Login successful for existing user:', foundUser);
         setUser(foundUser);
         localStorage.setItem('currentUser', JSON.stringify(foundUser));
         setIsLoading(false);
@@ -101,6 +106,7 @@ export const useAuth = (): UseAuthReturn => {
         createdAt: new Date().toISOString()
       };
       
+      console.log('Created new guest user:', guestUser);
       setUser(guestUser);
       localStorage.setItem('currentUser', JSON.stringify(guestUser));
     } catch (error) {
@@ -112,6 +118,7 @@ export const useAuth = (): UseAuthReturn => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     localStorage.removeItem('currentUser');
   };
@@ -121,11 +128,25 @@ export const useAuth = (): UseAuthReturn => {
     if (!user && permission === 'add_classified') return true;
     if (!user) return permission === 'read_content'; // Guests can only read other content
 
-    const userPermissions = USER_PERMISSIONS[user.role];
+    console.log('Checking permission:', permission, 'for user role:', user.role);
     
-    if (userPermissions.includes('all')) return true;
-    return userPermissions.includes(permission);
+    const userPermissions = USER_PERMISSIONS[user.role];
+    console.log('User permissions:', userPermissions);
+    
+    if (userPermissions.includes('all')) {
+      console.log('User has all permissions');
+      return true;
+    }
+    
+    const hasPermissionResult = userPermissions.includes(permission);
+    console.log('Permission check result:', hasPermissionResult);
+    return hasPermissionResult;
   };
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Auth state changed:', { user, isAuthenticated: !!user, isLoading });
+  }, [user, isLoading]);
 
   return {
     user,

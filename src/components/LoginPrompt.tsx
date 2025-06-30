@@ -32,12 +32,28 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
     e.preventDefault();
     setError('');
     
+    console.log('Login form submitted:', { email: formData.email, password: '***' });
+    
     try {
       await login(formData.email, formData.password);
+      console.log('Login successful, closing modal');
       onClose();
     } catch (error) {
       console.error('Login failed:', error);
       setError('Invalid email or password. Please try again.');
+    }
+  };
+
+  const handleDemoLogin = async (email: string) => {
+    setFormData({ ...formData, email, password: 'test' });
+    setError('');
+    
+    try {
+      await login(email, 'test');
+      onClose();
+    } catch (error) {
+      console.error('Demo login failed:', error);
+      setError('Demo login failed. Please try again.');
     }
   };
 
@@ -159,13 +175,33 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
 
           {/* Demo Accounts */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h4>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p><strong>Admin:</strong> admin@upkaar.org</p>
-              <p><strong>Moderator:</strong> moderator@upkaar.org</p>
-              <p><strong>User:</strong> user@example.com</p>
-              <p className="text-gray-500">Password: <strong>test</strong></p>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Demo Login:</h4>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleDemoLogin('admin@upkaar.org')}
+                disabled={isLoading}
+                className="w-full text-left px-3 py-2 bg-red-100 hover:bg-red-200 rounded text-sm font-medium text-red-800 transition-colors duration-200 disabled:opacity-50"
+              >
+                🛡️ Admin Account
+              </button>
+              <button
+                onClick={() => handleDemoLogin('moderator@upkaar.org')}
+                disabled={isLoading}
+                className="w-full text-left px-3 py-2 bg-orange-100 hover:bg-orange-200 rounded text-sm font-medium text-orange-800 transition-colors duration-200 disabled:opacity-50"
+              >
+                ⚖️ Moderator Account
+              </button>
+              <button
+                onClick={() => handleDemoLogin('user@example.com')}
+                disabled={isLoading}
+                className="w-full text-left px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded text-sm font-medium text-blue-800 transition-colors duration-200 disabled:opacity-50"
+              >
+                👤 Regular User Account
+              </button>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              All demo accounts use password: <strong>test</strong>
+            </p>
           </div>
         </div>
       </div>
