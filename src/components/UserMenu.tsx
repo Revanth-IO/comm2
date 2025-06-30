@@ -26,9 +26,9 @@ const UserMenu: React.FC = () => {
     });
   }, [user, isAuthenticated]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('🚪 Logout clicked');
-    logout();
+    await logout();
     setShowMenu(false);
   };
 
@@ -156,7 +156,7 @@ const UserMenu: React.FC = () => {
 
               {hasPermission('approve_content') && (
                 <button 
-                  onClick={() => handleMenuItemClick('content-review')}
+                  onClick={() => handleMenuItemClick('admin-panel')}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                 >
                   <FileText className="w-4 h-4" />

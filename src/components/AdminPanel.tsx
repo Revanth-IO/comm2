@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import { X, Shield, Users, FileText, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Eye } from 'lucide-react';
+import { X, Shield, Users, FileText, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Eye, Edit, Trash2, UserCheck, UserX, Ban, Mail, Phone, MapPin, Calendar, Search, Filter, MoreVertical } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useUsers } from '../hooks/useUsers';
+import { useClassifieds } from '../hooks/useClassifieds';
 
 interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface PendingItem {
-  id: string;
-  type: 'classified' | 'event' | 'business';
-  title: string;
-  author: string;
-  submittedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-  priority: 'low' | 'medium' | 'high';
 }
 
 interface UserStats {
@@ -26,57 +18,119 @@ interface UserStats {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const { user, hasPermission } = useAuth();
+  const { users, isLoading: usersLoading, updateUserRole, updateUserStatus, deleteUser } = useUsers();
+  const { classifieds, isLoading: classifiedsLoading, approveClassified, rejectClassified } = useClassifieds();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'settings'>('overview');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [contentSearchTerm, setContentSearchTerm] = useState('');
+  const [contentStatusFilter, setContentStatusFilter] = useState('pending');
+  const [showUserActions, setShowUserActions] = useState<string | null>(null);
 
-  // Mock data - in a real app, this would come from your backend
-  const [pendingItems] = useState<PendingItem[]>([
-    {
-      id: '1',
-      type: 'classified',
-      title: 'iPhone 15 Pro for Sale',
-      author: 'John Doe',
-      submittedAt: '2024-01-15T10:30:00Z',
-      status: 'pending',
-      priority: 'medium'
-    },
-    {
-      id: '2',
-      type: 'event',
-      title: 'Diwali Celebration 2024',
-      author: 'Community Center',
-      submittedAt: '2024-01-15T09:15:00Z',
-      status: 'pending',
-      priority: 'high'
-    },
-    {
-      id: '3',
-      type: 'business',
-      title: 'New Indian Restaurant',
-      author: 'Raj Patel',
-      submittedAt: '2024-01-14T16:45:00Z',
-      status: 'pending',
-      priority: 'low'
-    }
-  ]);
+  // Filter pending content items
+  const pendingClassifieds = classifieds.filter(ad => ad.status === 'pending');
+  const allContentItems = classifieds.filter(ad => {
+    const matchesSearch = ad.title.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
+                         ad.description.toLowerCase().includes(contentSearchTerm.toLowerCase());
+    const matchesStatus = contentStatusFilter === 'all' || ad.status === contentStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filter users
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                         u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+    const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   const userStats: UserStats = {
-    totalUsers: 1247,
-    activeUsers: 892,
-    newThisWeek: 23,
-    pendingApprovals: pendingItems.length
+    totalUsers: users.length,
+    activeUsers: users.filter(u => u.isActive).length,
+    newThisWeek: users.filter(u => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return new Date(u.createdAt) > weekAgo;
+    }).length,
+    pendingApprovals: pendingClassifieds.length
   };
 
-  const handleApprove = (itemId: string) => {
-    console.log('Approving item:', itemId);
-    // In a real app, this would call your backend API
-    alert(`Item ${itemId} approved successfully!`);
+  const handleApprove = async (itemId: string) => {
+    try {
+      await approveClassified(itemId);
+      alert(`Item ${itemId} approved successfully!`);
+    } catch (error) {
+      alert('Failed to approve item. Please try again.');
+    }
   };
 
-  const handleReject = (itemId: string) => {
-    console.log('Rejecting item:', itemId);
-    // In a real app, this would call your backend API
+  const handleReject = async (itemId: string) => {
     const reason = prompt('Reason for rejection (optional):');
-    alert(`Item ${itemId} rejected. Reason: ${reason || 'No reason provided'}`);
+    try {
+      await rejectClassified(itemId, reason || 'No reason provided');
+      alert(`Item ${itemId} rejected.`);
+    } catch (error) {
+      alert('Failed to reject item. Please try again.');
+    }
+  };
+
+  const handleUserRoleChange = async (userId: string, newRole: string) => {
+    try {
+      await updateUserRole(userId, newRole as any);
+      alert('User role updated successfully!');
+    } catch (error) {
+      alert('Failed to update user role. Please try again.');
+    }
+  };
+
+  const handleUserStatusToggle = async (userId: string, isActive: boolean) => {
+    try {
+      await updateUserStatus(userId, !isActive);
+      alert(`User ${!isActive ? 'activated' : 'deactivated'} successfully!`);
+    } catch (error) {
+      alert('Failed to update user status. Please try again.');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        await deleteUser(userId);
+        alert('User deleted successfully!');
+      } catch (error) {
+        alert('Failed to delete user. Please try again.');
+      }
+    }
+  };
+
+  const handleBulkUserAction = async (action: string) => {
+    if (selectedUsers.length === 0) {
+      alert('Please select users first.');
+      return;
+    }
+
+    if (confirm(`Are you sure you want to ${action} ${selectedUsers.length} users?`)) {
+      try {
+        for (const userId of selectedUsers) {
+          switch (action) {
+            case 'activate':
+              await updateUserStatus(userId, true);
+              break;
+            case 'deactivate':
+              await updateUserStatus(userId, false);
+              break;
+            case 'delete':
+              await deleteUser(userId);
+              break;
+          }
+        }
+        setSelectedUsers([]);
+        alert(`Successfully ${action}d ${selectedUsers.length} users.`);
+      } catch (error) {
+        alert(`Failed to ${action} users. Please try again.`);
+      }
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -100,12 +154,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'classified': return '🏷️';
-      case 'event': return '📅';
-      case 'business': return '🏢';
-      default: return '📄';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'text-green-600 bg-green-100';
+      case 'rejected': return 'text-red-600 bg-red-100';
+      case 'pending': return 'text-yellow-600 bg-yellow-100';
+      case 'expired': return 'text-gray-600 bg-gray-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'text-red-600 bg-red-100';
+      case 'moderator': return 'text-orange-600 bg-orange-100';
+      case 'content_manager': return 'text-purple-600 bg-purple-100';
+      case 'vendor': return 'text-blue-600 bg-blue-100';
+      case 'user': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -134,7 +200,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -180,9 +246,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               >
                 <FileText className="w-5 h-5" />
                 <span>Content Review</span>
-                {pendingItems.length > 0 && (
+                {pendingClassifieds.length > 0 && (
                   <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {pendingItems.length}
+                    {pendingClassifieds.length}
                   </span>
                 )}
               </button>
@@ -197,6 +263,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
               >
                 <Users className="w-5 h-5" />
                 <span>User Management</span>
+                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                  {users.length}
+                </span>
               </button>
               
               <button
@@ -266,21 +335,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h4>
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700">New user registration: priya.sharma@email.com</span>
-                      <span className="text-xs text-gray-500 ml-auto">2 hours ago</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700">Classified ad submitted for review</span>
-                      <span className="text-xs text-gray-500 ml-auto">4 hours ago</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700">Event approval requested</span>
-                      <span className="text-xs text-gray-500 ml-auto">6 hours ago</span>
-                    </div>
+                    {users.slice(0, 5).map((user, index) => (
+                      <div key={user.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-700">New user registration: {user.email}</span>
+                        <span className="text-xs text-gray-500 ml-auto">{formatDate(user.createdAt)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -289,76 +350,353 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             {activeTab === 'content' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-bold text-gray-900">Content Review</h3>
-                  <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-                    {pendingItems.length} items pending
-                  </span>
+                  <h3 className="text-2xl font-bold text-gray-900">Content Management</h3>
+                  <div className="flex items-center space-x-4">
+                    <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {pendingClassifieds.length} pending
+                    </span>
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {classifieds.length} total
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content Filters */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search content..."
+                        value={contentSearchTerm}
+                        onChange={(e) => setContentSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+                    <select
+                      value={contentStatusFilter}
+                      onChange={(e) => setContentStatusFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
                 </div>
                 
-                <div className="space-y-4">
-                  {pendingItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <span className="text-2xl">{getTypeIcon(item.type)}</span>
-                            <h4 className="text-lg font-semibold text-gray-900">{item.title}</h4>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
-                              {item.priority} priority
-                            </span>
+                {classifiedsLoading ? (
+                  <div className="text-center py-12">
+                    <div className="w-12 h-12 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading content...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {allContentItems.map((item) => (
+                      <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <span className="text-2xl">🏷️</span>
+                              <h4 className="text-lg font-semibold text-gray-900">{item.title}</h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                                {item.status}
+                              </span>
+                              {item.featured && (
+                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  Featured
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>By: {item.authorName}</span>
+                              <span>•</span>
+                              <span>Category: {item.category}</span>
+                              <span>•</span>
+                              <span>Location: {item.location}</span>
+                              <span>•</span>
+                              <span>Created: {formatDate(item.createdAt)}</span>
+                              {item.price && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-medium text-green-600">${item.price}</span>
+                                </>
+                              )}
+                            </div>
+                            {item.rejectionReason && (
+                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-red-800 text-sm">
+                                  <strong>Rejection Reason:</strong> {item.rejectionReason}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
-                            <span>By: {item.author}</span>
-                            <span>•</span>
-                            <span>Submitted: {formatDate(item.submittedAt)}</span>
-                            <span>•</span>
-                            <span className="capitalize">{item.type}</span>
+                          <div className="flex items-center space-x-2 ml-4">
+                            {item.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleApprove(item.id)}
+                                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleReject(item.id)}
+                                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2"
+                                >
+                                  <X className="w-4 h-4" />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+                            <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200 flex items-center space-x-2">
+                              <Eye className="w-4 h-4" />
+                              <span>View</span>
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button
-                            onClick={() => handleApprove(item.id)}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => handleReject(item.id)}
-                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Reject</span>
-                          </button>
-                          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200 flex items-center space-x-2">
-                            <Eye className="w-4 h-4" />
-                            <span>View</span>
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {pendingItems.length === 0 && (
-                    <div className="text-center py-12">
-                      <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                      <h4 className="text-xl font-semibold text-gray-900 mb-2">All caught up!</h4>
-                      <p className="text-gray-600">No content pending review at the moment.</p>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                    
+                    {allContentItems.length === 0 && (
+                      <div className="text-center py-12">
+                        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                        <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                          {contentStatusFilter === 'pending' ? 'All caught up!' : 'No content found'}
+                        </h4>
+                        <p className="text-gray-600">
+                          {contentStatusFilter === 'pending' 
+                            ? 'No content pending review at the moment.' 
+                            : 'No content matches your current filters.'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'users' && (
               <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900">User Management</h3>
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <p className="text-gray-600">User management features will be implemented here.</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    This would include user roles, permissions, account status, and moderation tools.
-                  </p>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-gray-900">User Management</h3>
+                  <div className="flex items-center space-x-4">
+                    {selectedUsers.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">{selectedUsers.length} selected</span>
+                        <button
+                          onClick={() => handleBulkUserAction('activate')}
+                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                        >
+                          Activate
+                        </button>
+                        <button
+                          onClick={() => handleBulkUserAction('deactivate')}
+                          className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                        >
+                          Deactivate
+                        </button>
+                        <button
+                          onClick={() => handleBulkUserAction('delete')}
+                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* User Filters */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => setUserRoleFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="user">User</option>
+                      <option value="vendor">Vendor</option>
+                      <option value="content_manager">Content Manager</option>
+                      <option value="moderator">Moderator</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+
+                {usersLoading ? (
+                  <div className="text-center py-12">
+                    <div className="w-12 h-12 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading users...</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-6 py-3 text-left">
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedUsers(filteredUsers.map(u => u.id));
+                                  } else {
+                                    setSelectedUsers([]);
+                                  }
+                                }}
+                                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                              />
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              User
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Role
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Joined
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUsers.includes(user.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedUsers([...selectedUsers, user.id]);
+                                    } else {
+                                      setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                                    <span className="text-white font-semibold text-sm">
+                                      {user.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                    <div className="text-sm text-gray-500">{user.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                                  {user.role.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  user.isActive 
+                                    ? 'text-green-600 bg-green-100' 
+                                    : 'text-red-600 bg-red-100'
+                                }`}>
+                                  {user.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-500">
+                                {formatDate(user.createdAt)}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setShowUserActions(showUserActions === user.id ? null : user.id)}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                  >
+                                    <MoreVertical className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                  
+                                  {showUserActions === user.id && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
+                                      <div className="px-4 py-2 border-b border-gray-200">
+                                        <p className="text-sm font-medium text-gray-900">Change Role</p>
+                                      </div>
+                                      {['user', 'vendor', 'content_manager', 'moderator', 'admin'].map((role) => (
+                                        <button
+                                          key={role}
+                                          onClick={() => {
+                                            handleUserRoleChange(user.id, role);
+                                            setShowUserActions(null);
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        >
+                                          {role.replace('_', ' ')}
+                                        </button>
+                                      ))}
+                                      <div className="border-t border-gray-200 mt-2 pt-2">
+                                        <button
+                                          onClick={() => {
+                                            handleUserStatusToggle(user.id, user.isActive);
+                                            setShowUserActions(null);
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                                        >
+                                          {user.isActive ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                          <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleDeleteUser(user.id);
+                                            setShowUserActions(null);
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          <span>Delete User</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {filteredUsers.length === 0 && (
+                      <div className="text-center py-12">
+                        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-xl font-semibold text-gray-900 mb-2">No users found</h4>
+                        <p className="text-gray-600">No users match your current filters.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
