@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, MapPin, DollarSign, Tag, User, Mail, Phone, Camera } from 'lucide-react';
+import { useClassifieds } from '../hooks/useClassifieds';
 
 interface CreateClassifiedModalProps {
   isOpen: boolean;
@@ -7,6 +8,7 @@ interface CreateClassifiedModalProps {
 }
 
 const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, onClose }) => {
+  const { createClassified, isLoading } = useClassifieds();
   const [isSubmitted, setIsSubmitted] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -41,7 +43,7 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      // In a real app, you would upload these to a server
+      // In a real app, you would upload these to Supabase Storage
       // For now, we'll just create placeholder URLs
       const newImages = Array.from(files).map((file, index) => 
         `https://images.pexels.com/photos/4199098/pexels-photo-4199098.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop&t=${Date.now()}_${index}`
@@ -60,38 +62,48 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Allow anyone to submit - no authentication required
-    // In a real app, this would send data to your backend
-    console.log('Classified ad submitted:', {
-      ...formData,
-      authorId: 'guest_' + Date.now(),
-      authorName: formData.contactName,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
-
-    setIsSubmitted(true);
-    
-    // Reset form after 3 seconds and close modal
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        subcategory: '',
-        price: '',
-        location: '',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
-        images: []
+    try {
+      await createClassified({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        subcategory: formData.subcategory || undefined,
+        price: formData.price ? parseFloat(formData.price) : undefined,
+        location: formData.location,
+        contactInfo: {
+          name: formData.contactName,
+          email: formData.contactEmail,
+          phone: formData.contactPhone || undefined
+        },
+        images: formData.images
       });
-      onClose();
-    }, 3000);
+
+      setIsSubmitted(true);
+      
+      // Reset form after 3 seconds and close modal
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          title: '',
+          description: '',
+          category: '',
+          subcategory: '',
+          price: '',
+          location: '',
+          contactName: '',
+          contactEmail: '',
+          contactPhone: '',
+          images: []
+        });
+        onClose();
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to create classified:', error);
+      alert('Failed to create classified ad. Please try again.');
+    }
   };
 
   if (!isOpen) return null;
@@ -382,9 +394,9 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
               </div>
 
               <div className="bg-green-50 rounded-lg p-4">
-                <h4 className="font-medium text-green-900 mb-2">✅ No Account Required</h4>
+                <h4 className="font-medium text-green-900 mb-2">✅ Database Integration Active</h4>
                 <p className="text-sm text-green-800">
-                  You can post classified ads without creating an account. Just provide your contact information and we'll handle the rest!
+                  Your ad will be stored in our database and persist across sessions. Real-time updates are enabled!
                 </p>
               </div>
 
@@ -398,9 +410,10 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all duration-200 transform hover:scale-105"
+                  disabled={isLoading}
+                  className="flex-1 bg-gradient-to-r from-orange-600 to-orange-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  Submit for Review
+                  {isLoading ? 'Submitting...' : 'Submit for Review'}
                 </button>
               </div>
             </div>

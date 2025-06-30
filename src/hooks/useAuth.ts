@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, UserRole, USER_PERMISSIONS } from '../types';
+import { useSupabaseAuth } from './useSupabaseAuth';
 
 interface UseAuthReturn {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   isLoading: boolean;
 }
 
-// Mock user data - in a real app, this would come from your backend
-const MOCK_USERS: User[] = [
+// Demo users for fallback when Supabase is not available
+const DEMO_USERS: User[] = [
   {
     id: '1',
     email: 'admin@upkaar.org',
@@ -38,7 +40,6 @@ const MOCK_USERS: User[] = [
   }
 ];
 
-// Valid passwords for demo accounts
 const DEMO_PASSWORDS: Record<string, string> = {
   'admin@upkaar.org': 'test',
   'user@example.com': 'test',
@@ -46,59 +47,92 @@ const DEMO_PASSWORDS: Record<string, string> = {
 };
 
 export const useAuth = (): UseAuthReturn => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [fallbackUser, setFallbackUser] = useState<User | null>(null);
+  const [fallbackLoading, setFallbackLoading] = useState(true);
+  const [useSupabase, setUseSupabase] = useState(true);
 
-  // Initialize auth state from localStorage
+  // Try Supabase first
+  const supabaseAuth = useSupabaseAuth();
+
+  // Initialize fallback auth state from localStorage
   useEffect(() => {
-    console.log('🔄 Initializing auth state...');
+    console.log('🔄 Initializing fallback auth state...');
     const savedUser = localStorage.getItem('currentUser');
     
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-        console.log('✅ Restored user from localStorage:', parsedUser);
-        setUser(parsedUser);
+        console.log('✅ Restored fallback user from localStorage:', parsedUser);
+        setFallbackUser(parsedUser);
       } catch (error) {
         console.error('❌ Error parsing saved user:', error);
         localStorage.removeItem('currentUser');
       }
-    } else {
-      console.log('ℹ️ No saved user found');
     }
     
-    setIsLoading(false);
+    setFallbackLoading(false);
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
-    console.log('🔐 Login attempt:', { email, password: '***' });
-    setIsLoading(true);
+  // Check if Supabase is working
+  useEffect(() => {
+    const checkSupabase = async () => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseKey || 
+            supabaseUrl === 'your-supabase-url' || 
+            supabaseKey === 'your-supabase-anon-key') {
+          console.log('ℹ️ Supabase not configured, using fallback auth');
+          setUseSupabase(false);
+          return;
+        }
+
+        // Test Supabase connection
+        const { supabase } = await import('../lib/supabase');
+        const { error } = await supabase.from('categories').select('count').limit(1);
+        
+        if (error) {
+          console.log('ℹ️ Supabase connection failed, using fallback auth:', error.message);
+          setUseSupabase(false);
+        } else {
+          console.log('✅ Supabase connection successful');
+          setUseSupabase(true);
+        }
+      } catch (error) {
+        console.log('ℹ️ Supabase not available, using fallback auth:', error);
+        setUseSupabase(false);
+      }
+    };
+
+    checkSupabase();
+  }, []);
+
+  const fallbackLogin = useCallback(async (email: string, password: string): Promise<void> => {
+    console.log('🔐 Fallback login attempt:', { email, password: '***' });
+    setFallbackLoading(true);
     
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Check if it's a demo account with correct password
       if (DEMO_PASSWORDS[email] && DEMO_PASSWORDS[email] === password) {
-        const foundUser = MOCK_USERS.find(u => u.email === email);
+        const foundUser = DEMO_USERS.find(u => u.email === email);
         if (foundUser) {
-          console.log('✅ Login successful for demo user:', foundUser);
-          setUser(foundUser);
+          console.log('✅ Fallback login successful for demo user:', foundUser);
+          setFallbackUser(foundUser);
           localStorage.setItem('currentUser', JSON.stringify(foundUser));
           return;
         }
       }
       
-      // Check if user exists in mock data (for any password in demo mode)
-      const foundUser = MOCK_USERS.find(u => u.email === email);
+      const foundUser = DEMO_USERS.find(u => u.email === email);
       if (foundUser) {
-        console.log('✅ Login successful for existing user:', foundUser);
-        setUser(foundUser);
+        console.log('✅ Fallback login successful for existing user:', foundUser);
+        setFallbackUser(foundUser);
         localStorage.setItem('currentUser', JSON.stringify(foundUser));
         return;
       }
       
-      // Create a guest user for any other email (demo purposes)
       const guestUser: User = {
         id: Date.now().toString(),
         email,
@@ -108,64 +142,78 @@ export const useAuth = (): UseAuthReturn => {
         createdAt: new Date().toISOString()
       };
       
-      console.log('✅ Created new guest user:', guestUser);
-      setUser(guestUser);
+      console.log('✅ Created new fallback guest user:', guestUser);
+      setFallbackUser(guestUser);
       localStorage.setItem('currentUser', JSON.stringify(guestUser));
     } catch (error) {
-      console.error('❌ Login error:', error);
+      console.error('❌ Fallback login error:', error);
       throw new Error('Login failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setFallbackLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    console.log('🚪 Logging out user');
-    setUser(null);
+  const fallbackSignUp = useCallback(async (email: string, password: string, name: string): Promise<void> => {
+    console.log('📝 Fallback signup attempt:', email);
+    setFallbackLoading(true);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newUser: User = {
+        id: Date.now().toString(),
+        email,
+        name,
+        role: 'user',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log('✅ Fallback signup successful:', newUser);
+      setFallbackUser(newUser);
+      localStorage.setItem('currentUser', JSON.stringify(newUser));
+    } catch (error) {
+      console.error('❌ Fallback signup error:', error);
+      throw new Error('Signup failed. Please try again.');
+    } finally {
+      setFallbackLoading(false);
+    }
+  }, []);
+
+  const fallbackLogout = useCallback(async (): Promise<void> => {
+    console.log('🚪 Fallback logout');
+    setFallbackUser(null);
     localStorage.removeItem('currentUser');
   }, []);
 
-  const hasPermission = useCallback((permission: string): boolean => {
-    // Allow guest users to post classifieds
-    if (!user && permission === 'add_classified') {
-      console.log('✅ Guest permission granted for add_classified');
+  const fallbackHasPermission = useCallback((permission: string): boolean => {
+    if (!fallbackUser && permission === 'add_classified') {
       return true;
     }
-    if (!user) {
-      console.log('❌ No user, only read_content allowed');
+    if (!fallbackUser) {
       return permission === 'read_content';
     }
 
-    console.log('🔍 Checking permission:', permission, 'for user role:', user.role);
-    
-    const userPermissions = USER_PERMISSIONS[user.role];
-    console.log('📋 User permissions:', userPermissions);
-    
+    const userPermissions = USER_PERMISSIONS[fallbackUser.role];
     if (userPermissions.includes('all')) {
-      console.log('✅ User has ALL permissions');
       return true;
     }
     
-    const hasPermissionResult = userPermissions.includes(permission);
-    console.log('🎯 Permission check result:', hasPermissionResult);
-    return hasPermissionResult;
-  }, [user]);
+    return userPermissions.includes(permission);
+  }, [fallbackUser]);
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('🔄 Auth state changed:', { 
-      user: user ? { name: user.name, email: user.email, role: user.role } : null, 
-      isAuthenticated: !!user, 
-      isLoading 
-    });
-  }, [user, isLoading]);
+  // Return appropriate auth based on availability
+  if (useSupabase && !supabaseAuth.isLoading) {
+    return supabaseAuth;
+  }
 
   return {
-    user,
-    isAuthenticated: !!user,
-    login,
-    logout,
-    hasPermission,
-    isLoading
+    user: fallbackUser,
+    isAuthenticated: !!fallbackUser,
+    login: fallbackLogin,
+    signUp: fallbackSignUp,
+    logout: fallbackLogout,
+    hasPermission: fallbackHasPermission,
+    isLoading: fallbackLoading
   };
 };
