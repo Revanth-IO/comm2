@@ -60,33 +60,48 @@ const UserMenu: React.FC = () => {
           </div>
 
           <div className="py-2">
-            <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+            <button 
+              onClick={() => setShowMenu(false)}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+            >
               <User className="w-4 h-4" />
               <span>Profile Settings</span>
             </button>
 
             {hasPermission('add_classified') && (
-              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+              <button 
+                onClick={() => setShowMenu(false)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+              >
                 <Plus className="w-4 h-4" />
                 <span>My Listings</span>
               </button>
             )}
 
             {hasPermission('approve_content') && (
-              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+              <button 
+                onClick={() => setShowMenu(false)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+              >
                 <FileText className="w-4 h-4" />
                 <span>Content Review</span>
               </button>
             )}
 
             {hasPermission('manage_roles') && (
-              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+              <button 
+                onClick={() => setShowMenu(false)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+              >
                 <Shield className="w-4 h-4" />
                 <span>Admin Panel</span>
               </button>
             )}
 
-            <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+            <button 
+              onClick={() => setShowMenu(false)}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+            >
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </button>
