@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Calendar, Building, Newspaper, Users, Tag, Search } from 'lucide-react';
+import { Menu, X, Home, Calendar, Building, Newspaper, Users, Tag, Search, Info } from 'lucide-react';
 import UserMenu from './UserMenu';
 
 const Header = () => {
@@ -14,6 +14,7 @@ const Header = () => {
     { name: 'Classifieds', href: '#classifieds', icon: Tag },
     { name: 'News', href: '#news', icon: Newspaper },
     { name: 'Community', href: '#community', icon: Users },
+    { name: 'About', href: '#about', icon: Info },
   ];
 
   const handleSearch = (e: React.FormEvent) => {
@@ -41,6 +42,15 @@ const Header = () => {
     }));
   };
 
+  const scrollToAbout = () => {
+    const aboutSection = document.querySelector('#about') || 
+                        document.querySelector('section:last-of-type');
+    if (aboutSection) {
+      aboutSection.scrollIntoView({ behavior: 'smooth' });
+    }
+    setIsMenuOpen(false);
+  };
+
   return (
     <header className="bg-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -63,6 +73,7 @@ const Header = () => {
                 <a
                   key={item.name}
                   href={item.href}
+                  onClick={item.name === 'About' ? (e) => { e.preventDefault(); scrollToAbout(); } : undefined}
                   className="flex items-center space-x-1 text-gray-700 hover:text-orange-600 transition-colors duration-200 font-medium"
                 >
                   <item.icon className="w-4 h-4" />
@@ -166,8 +177,15 @@ const Header = () => {
                 <a
                   key={item.name}
                   href={item.href}
+                  onClick={(e) => {
+                    if (item.name === 'About') {
+                      e.preventDefault();
+                      scrollToAbout();
+                    } else {
+                      setIsMenuOpen(false);
+                    }
+                  }}
                   className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:text-orange-600 hover:bg-gray-50 rounded-md transition-colors duration-200"
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>

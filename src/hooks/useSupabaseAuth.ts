@@ -154,6 +154,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
 
         if (profileError) {
           console.error('❌ Error creating user profile:', profileError);
+          // Don't throw here as the user was created successfully
         }
 
         const convertedUser = await convertSupabaseUser(data.user);

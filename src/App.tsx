@@ -8,6 +8,7 @@ import ClassifiedsSection from './components/ClassifiedsSection';
 import NewsSection from './components/NewsSection';
 import ServicesSection from './components/ServicesSection';
 import CommunityHighlights from './components/CommunityHighlights';
+import AboutUs from './components/AboutUs';
 import Footer from './components/Footer';
 import PostItButton from './components/PostItButton';
 import FeedbackButton from './components/FeedbackButton';
@@ -24,6 +25,7 @@ function App() {
         <NewsSection />
         <ServicesSection />
         <CommunityHighlights />
+        <AboutUs />
         <Footer />
         <PostItButton />
         <FeedbackButton />
