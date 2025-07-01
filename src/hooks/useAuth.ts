@@ -212,12 +212,19 @@ export const useAuth = (): UseAuthReturn => {
     return userPermissions.includes(permission);
   }, [fallbackUser]);
 
-  // Hybrid login function that tries Supabase first, then falls back for demo accounts
+  // Hybrid login function that prioritizes demo accounts for fallback
   const hybridLogin = useCallback(async (email: string, password: string): Promise<void> => {
     console.log('🔄 Hybrid login attempt for:', email);
     
-    // If Supabase is available and it's not a demo account, try Supabase first
-    if (supabaseAvailable && !isDemoAccount(email)) {
+    // ALWAYS use fallback for demo accounts, regardless of Supabase availability
+    if (isDemoAccount(email)) {
+      console.log('🎯 Demo account detected, using fallback login:', email);
+      await fallbackLogin(email, password);
+      return;
+    }
+    
+    // For non-demo accounts, try Supabase first if available
+    if (supabaseAvailable) {
       try {
         await supabaseAuth.login(email, password);
         console.log('✅ Supabase login successful');
@@ -228,7 +235,7 @@ export const useAuth = (): UseAuthReturn => {
       }
     }
     
-    // For demo accounts or when Supabase fails, use fallback
+    // Use fallback for non-demo accounts when Supabase fails or is unavailable
     console.log('🔄 Using fallback login for:', email);
     await fallbackLogin(email, password);
   }, [supabaseAvailable, supabaseAuth.login, fallbackLogin]);
