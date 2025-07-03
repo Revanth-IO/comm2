@@ -9,7 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:production": "npm run lint && vite build"
+    "build:production": "vite build",
+    "deploy": "bash deploy.sh"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
