@@ -7,9 +7,20 @@ interface DatabaseManagerProps {
   onClose: () => void;
 }
 
+interface Result {
+  message: string;
+  counts?: {
+    categories?: number;
+    classifieds?: number;
+    events?: number;
+    businesses?: number;
+    feedback?: number;
+  };
+}
+
 const DatabaseManager: React.FC<DatabaseManagerProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleInsertMockData = async () => {

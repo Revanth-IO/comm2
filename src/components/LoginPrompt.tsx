@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, LogIn, UserPlus, Loader2 } from 'lucide-react';
+import { X, LogIn, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useNotification } from '../hooks/useNotification';
 
 interface LoginPromptProps {
   isOpen: boolean;
@@ -9,7 +10,8 @@ interface LoginPromptProps {
 }
 
 const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) => {
-  const { login, isLoading } = useAuth();
+  const { login, signUp, isLoading } = useAuth();
+  const { showNotification } = useNotification();
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -35,16 +37,19 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
     console.log('🔐 Login form submitted:', { email: formData.email, password: '***' });
     
     try {
-      await login(formData.email, formData.password);
-      console.log('✅ Login successful, closing modal');
-      
-      // Force a small delay to ensure state updates propagate
-      setTimeout(() => {
+      if (isLogin) {
+        await login(formData.email, formData.password);
+        console.log('✅ Login successful, closing modal');
         onClose();
-      }, 100);
+      } else {
+        await signUp(formData.email, formData.password, formData.name);
+        console.log('✅ Sign up successful');
+        showNotification(`A verification link has been sent to ${formData.email}. Please click the link in the email to complete your registration.`, 'info');
+        onClose();
+      }
     } catch (error) {
-      console.error('❌ Login failed:', error);
-      setError('Invalid email or password. Please try again.');
+      console.error('❌ Authentication failed:', error);
+      setError(error instanceof Error ? error.message : 'Sign up failed. Please check your details and try again.');
     }
   };
 
@@ -56,11 +61,7 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isOpen, onClose, message }) =
     try {
       await login(email, 'test');
       console.log('✅ Demo login successful');
-      
-      // Force a small delay to ensure state updates propagate
-      setTimeout(() => {
-        onClose();
-      }, 100);
+      onClose();
     } catch (error) {
       console.error('❌ Demo login failed:', error);
       setError('Demo login failed. Please try again.');

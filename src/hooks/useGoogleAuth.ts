@@ -17,10 +17,34 @@ interface UseGoogleAuthReturn {
   isInitialized: boolean;
 }
 
+interface GoogleAccounts {
+  id: {
+    initialize: (config: {
+      client_id: string;
+      callback: (response: CredentialResponse) => void;
+      auto_select: boolean;
+      cancel_on_tap_outside: boolean;
+    }) => void;
+    renderButton: (
+      parent: HTMLElement,
+      options: {
+        theme: string;
+        size: string;
+        type: string;
+        width: number;
+        text: string;
+        shape: string;
+      }
+    ) => void;
+    disableAutoSelect: () => void;
+  };
+}
+
 declare global {
   interface Window {
-    google: any;
-    gapi: any;
+    google: {
+      accounts: GoogleAccounts;
+    };
   }
 }
 
@@ -72,7 +96,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
     };
 
     initializeGoogleAuth();
-  }, []);
+  }, [handleCredentialResponse]);
 
   const loadGoogleScript = (): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -92,7 +116,11 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
     });
   };
 
-  const handleCredentialResponse = (response: any) => {
+  interface CredentialResponse {
+  credential: string;
+}
+
+  const handleCredentialResponse = useCallback((response: CredentialResponse) => {
     try {
       // Decode the JWT token
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
@@ -112,7 +140,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
     } catch (error) {
       console.error('Failed to process Google credential:', error);
     }
-  };
+  }, []);
 
   const signOut = () => {
     setUser(null);

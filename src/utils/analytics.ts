@@ -12,7 +12,7 @@ export const initializeAnalytics = () => {
 
     // Initialize gtag
     window.dataLayer = window.dataLayer || [];
-    function gtag(...args: any[]) {
+    function gtag(...args: GtagArguments) {
       window.dataLayer.push(args);
     }
     gtag('js', new Date());
@@ -22,14 +22,20 @@ export const initializeAnalytics = () => {
     });
 
     // Make gtag available globally
-    (window as any).gtag = gtag;
+    (window.gtag as (...args: GtagArguments) => void)('config', GA_TRACKING_ID, {
+      page_title: document.title,
+      page_location: window.location.href,
+    });
+
+    // Make gtag available globally
+    
   }
 };
 
 // Track page views
 export const trackPageView = (path: string, title: string) => {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('config', 'G-XXXXXXXXXX', {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('config', GA_TRACKING_ID, {
       page_path: path,
       page_title: title,
     });
@@ -38,8 +44,8 @@ export const trackPageView = (path: string, title: string) => {
 
 // Track events
 export const trackEvent = (action: string, category: string, label?: string, value?: number) => {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', action, {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', action, {
       event_category: category,
       event_label: label,
       value: value,
@@ -47,9 +53,26 @@ export const trackEvent = (action: string, category: string, label?: string, val
   }
 };
 
+interface ConfigParameters {
+  page_title?: string;
+  page_location?: string;
+  page_path?: string;
+}
+
+interface EventParameters {
+  event_category?: string;
+  event_label?: string;
+  value?: number;
+}
+
+type GtagArguments =
+  | ['js', Date]
+  | ['config', string, ConfigParameters?]
+  | ['event', string, EventParameters?];
+
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    dataLayer: GtagArguments[];
+    gtag: (...args: GtagArguments) => void;
   }
 }

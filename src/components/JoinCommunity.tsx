@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Users, Calendar, Building, Heart, CheckCircle } from 'lucide-react';
 
 interface JoinCommunityProps {

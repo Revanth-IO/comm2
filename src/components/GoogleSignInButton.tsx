@@ -7,8 +7,7 @@ interface GoogleSignInButtonProps {
 }
 
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
-  className = '',
-  children
+  className = ''
 }) => {
   const { isLoading, user, isSignedIn, isInitialized } = useGoogleAuth();
   const buttonRef = useRef<HTMLDivElement>(null);

@@ -1,81 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, MapPin, Phone, ExternalLink } from 'lucide-react';
+import { getSupabaseClient } from '../lib/supabase';
+const supabase = getSupabaseClient();
 
 const BusinessDirectory = () => {
-  const businesses = [
-    {
-      id: 1,
-      name: 'Spice Garden Restaurant',
-      category: 'Restaurant',
-      rating: 4.8,
-      reviews: 234,
-      location: 'Edison, NJ',
-      phone: '(732) 555-0123',
-      description: 'Authentic North Indian cuisine with traditional recipes passed down through generations.',
-      image: 'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: true
-    },
-    {
-      id: 2,
-      name: 'Patel Immigration Law',
-      category: 'Legal Services',
-      rating: 4.9,
-      reviews: 156,
-      location: 'Jersey City, NJ',
-      phone: '(201) 555-0456',
-      description: 'Specialized immigration attorney with 15+ years helping Indian families.',
-      image: 'https://images.pexels.com/photos/5668858/pexels-photo-5668858.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: true
-    },
-    {
-      id: 3,
-      name: 'Mumbai Market',
-      category: 'Grocery Store',
-      rating: 4.7,
-      reviews: 89,
-      location: 'Jackson Heights, NY',
-      phone: '(718) 555-0789',
-      description: 'Fresh Indian groceries, spices, and specialty items imported weekly.',
-      image: 'https://images.pexels.com/photos/4199098/pexels-photo-4199098.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: false
-    },
-    {
-      id: 4,
-      name: 'Sharma Real Estate',
-      category: 'Real Estate',
-      rating: 4.6,
-      reviews: 67,
-      location: 'Philadelphia, PA',
-      phone: '(215) 555-0321',
-      description: 'Helping Indian families find their dream homes in the tri-state area.',
-      image: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: false
-    },
-    {
-      id: 5,
-      name: 'Bollywood Dance Studio',
-      category: 'Entertainment',
-      rating: 4.9,
-      reviews: 123,
-      location: 'Manhattan, NY',
-      phone: '(212) 555-0654',
-      description: 'Professional dance classes for all ages in classical and modern Indian dance.',
-      image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: true
-    },
-    {
-      id: 6,
-      name: 'Indian Medical Center',
-      category: 'Healthcare',
-      rating: 4.8,
-      reviews: 201,
-      location: 'Princeton, NJ',
-      phone: '(609) 555-0987',
-      description: 'Comprehensive healthcare services with Hindi and Gujarati speaking doctors.',
-      image: 'https://images.pexels.com/photos/356040/pexels-photo-356040.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      featured: false
-    }
-  ];
+  const [businesses, setBusinesses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching businesses:', error);
+      } else {
+        setBusinesses(data);
+      }
+      setLoading(false);
+    };
+
+    fetchBusinesses();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
 
   const categories = ['All', 'Restaurant', 'Legal Services', 'Grocery Store', 'Real Estate', 'Entertainment', 'Healthcare'];
 

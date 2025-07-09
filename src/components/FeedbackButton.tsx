@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Bug, Lightbulb } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 
 const FeedbackButton: React.FC = () => {

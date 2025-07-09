@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
 import { User, UserRole } from '../types';
 
 interface UseSupabaseAuthReturn {
@@ -30,7 +30,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
   // Convert Supabase user to our User type
   const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<User> => {
     // Get user profile from our user_profiles table
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await getSupabaseClient()
       .from('user_profiles')
       .select('*')
       .eq('id', supabaseUser.id)
@@ -56,7 +56,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
     console.log('🔄 Initializing Supabase auth...');
     
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    getSupabaseClient().auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('❌ Error getting session:', error);
         setIsLoading(false);
@@ -73,7 +73,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
@@ -97,7 +97,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await getSupabaseClient().auth.signInWithPassword({
         email,
         password
       });
@@ -125,7 +125,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await getSupabaseClient().auth.signUp({
         email,
         password,
         options: {
@@ -144,7 +144,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
         console.log('✅ Signup successful:', data.user.email);
         
         // Create user profile
-        const { error: profileError } = await supabase
+        const { error: profileError } = await getSupabaseClient()
           .from('user_profiles')
           .insert({
             id: data.user.id,
@@ -154,7 +154,6 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
 
         if (profileError) {
           console.error('❌ Error creating user profile:', profileError);
-          // Don't throw here as the user was created successfully
         }
 
         const convertedUser = await convertSupabaseUser(data.user);
@@ -173,7 +172,7 @@ export const useSupabaseAuth = (): UseSupabaseAuthReturn => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await getSupabaseClient().auth.signOut();
       if (error) {
         console.error('❌ Logout error:', error);
         throw new Error(error.message);

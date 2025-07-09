@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 import { User, UserRole } from '../types';
 
 interface UseUsersReturn {
@@ -70,9 +70,9 @@ export const useUsers = (): UseUsersReturn => {
       
       setUsers(mockUsers);
       console.log('✅ Loaded mock users:', mockUsers.length);
-    } catch (err) {
-      console.error('❌ Error in fetchUsers:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    } catch (error) {
+      console.error('❌ Error in fetchUsers:', error);
+      setError(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +84,7 @@ export const useUsers = (): UseUsersReturn => {
 
       // Try to update in Supabase user_profiles table if available
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabaseClient()
           .from('user_profiles')
           .upsert({
             id: userId,
@@ -94,8 +94,8 @@ export const useUsers = (): UseUsersReturn => {
         if (updateError) {
           console.warn('⚠️ Could not update role in database:', updateError.message);
         }
-      } catch (dbError) {
-        console.warn('⚠️ Database update failed, updating locally only');
+      } catch (error) {
+        console.warn('⚠️ Database update failed, updating locally only:', error.message);
       }
 
       // Update local state
@@ -108,7 +108,7 @@ export const useUsers = (): UseUsersReturn => {
       console.log('✅ Updated user role locally:', userId, role);
     } catch (err) {
       console.error('❌ Error updating user role:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update user role');
+      setError((err as Error).message);
       throw err;
     }
   }, []);
@@ -119,7 +119,7 @@ export const useUsers = (): UseUsersReturn => {
 
       // Try to update in Supabase user_profiles table if available
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabaseClient()
           .from('user_profiles')
           .upsert({
             id: userId,
@@ -129,8 +129,8 @@ export const useUsers = (): UseUsersReturn => {
         if (updateError) {
           console.warn('⚠️ Could not update status in database:', updateError.message);
         }
-      } catch (dbError) {
-        console.warn('⚠️ Database update failed, updating locally only');
+      } catch (error) {
+        console.warn('⚠️ Database update failed, updating locally only:', error.message);
       }
 
       // Update local state
@@ -143,7 +143,7 @@ export const useUsers = (): UseUsersReturn => {
       console.log('✅ Updated user status locally:', userId, isActive);
     } catch (err) {
       console.error('❌ Error updating user status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update user status');
+      setError((err as Error).message);
       throw err;
     }
   }, []);
@@ -161,7 +161,7 @@ export const useUsers = (): UseUsersReturn => {
       console.log('✅ Removed user from local state:', userId);
     } catch (err) {
       console.error('❌ Error deleting user:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      setError(err instanceof Error ? err.message : String(err));
       throw err;
     }
   }, []);

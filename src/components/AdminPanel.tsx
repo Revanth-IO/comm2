@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, Users, FileText, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Eye, Edit, Trash2, UserCheck, UserX, Ban, Mail, Phone, MapPin, Calendar, Search, Filter, MoreVertical, RefreshCw, Zap, Database } from 'lucide-react';
+import { Search, CheckCircle, Clock, Users, Settings, FileText, Shield, AlertTriangle, RefreshCw, X, BarChart3, Database, Eye, Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useUsers } from '../hooks/useUsers';
 import { useClassifieds } from '../hooks/useClassifieds';
@@ -19,15 +19,12 @@ interface UserStats {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
   const { user, hasPermission } = useAuth();
-  const { users, isLoading: usersLoading, updateUserRole, updateUserStatus, deleteUser } = useUsers();
+  const { users } = useUsers();
   const { classifieds, isLoading: classifiedsLoading, approveClassified, rejectClassified, refetch, lastUpdate, clearPersistedChanges } = useClassifieds();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'settings' | 'database'>('overview');
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  
   const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [contentStatusFilter, setContentStatusFilter] = useState('pending');
-  const [showUserActions, setShowUserActions] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
@@ -80,15 +77,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     return matchesSearch && matchesStatus;
   });
 
-  // Filter users safely
-  const filteredUsers = safeUsers.filter(u => {
-    if (!u) return false;
-    
-    const matchesSearch = (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                         (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase());
-    const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
-    return matchesSearch && matchesRole;
-  });
+  
 
   const userStats: UserStats = {
     totalUsers: safeUsers.length,
@@ -250,129 +239,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     }, 3000);
   };
 
-  const handleUserRoleChange = async (userId: string, newRole: string) => {
-    try {
-      await updateUserRole(userId, newRole as any);
-      showNotification('✅ User role updated successfully!', 'success');
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      showNotification('❌ Failed to update user role', 'error');
-    }
-  };
+  
 
-  const handleUserStatusToggle = async (userId: string, isActive: boolean) => {
-    try {
-      await updateUserStatus(userId, !isActive);
-      showNotification(`✅ User ${!isActive ? 'activated' : 'deactivated'} successfully!`, 'success');
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      showNotification('❌ Failed to update user status', 'error');
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        await deleteUser(userId);
-        showNotification('✅ User deleted successfully!', 'success');
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        showNotification('❌ Failed to delete user', 'error');
-      }
-    }
-  };
-
-  const handleBulkUserAction = async (action: string) => {
-    if (selectedUsers.length === 0) {
-      showNotification('ℹ️ Please select users first', 'warning');
-      return;
-    }
-
-    if (confirm(`Are you sure you want to ${action} ${selectedUsers.length} users?`)) {
-      try {
-        for (const userId of selectedUsers) {
-          switch (action) {
-            case 'activate':
-              await updateUserStatus(userId, true);
-              break;
-            case 'deactivate':
-              await updateUserStatus(userId, false);
-              break;
-            case 'delete':
-              await deleteUser(userId);
-              break;
-          }
-        }
-        setSelectedUsers([]);
-        showNotification(`✅ Successfully ${action}d ${selectedUsers.length} users`, 'success');
-      } catch (error) {
-        console.error(`Error ${action}ing users:`, error);
-        showNotification(`❌ Failed to ${action} users`, 'error');
-      }
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      if (!dateString) return 'Unknown';
-      
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Invalid date';
-      
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - date.getTime());
-      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-      
-      if (diffHours < 24) return `${diffHours} hours ago`;
-      const diffDays = Math.ceil(diffHours / 24);
-      if (diffDays < 7) return `${diffDays} days ago`;
-      return date.toLocaleDateString();
-    } catch {
-      return 'Unknown';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'text-green-600 bg-green-100';
-      case 'rejected': return 'text-red-600 bg-red-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      case 'expired': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'text-red-600 bg-red-100';
-      case 'moderator': return 'text-orange-600 bg-orange-100';
-      case 'content_manager': return 'text-purple-600 bg-purple-100';
-      case 'vendor': return 'text-blue-600 bg-blue-100';
-      case 'user': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  // Close user actions dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowUserActions(null);
-    };
-
-    if (showUserActions) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showUserActions]);
+  
 
   if (!isOpen || !isInitialized) return null;
 

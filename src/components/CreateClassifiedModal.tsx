@@ -1,20 +1,29 @@
-import React, { useState } from 'react';
-import { X, Upload, MapPin, DollarSign, Tag, User, Mail, Phone, Camera } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, MapPin, DollarSign, Tag, User, Mail, Phone, Camera } from 'lucide-react';
 import { useClassifieds } from '../hooks/useClassifieds';
+import { getSupabaseClient } from '../lib/supabase';
 
 interface CreateClassifiedModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  subcategories: string[] | null;
+}
+
 const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, onClose }) => {
+  console.log('CreateClassifiedModal rendered, isOpen:', isOpen);
   const { createClassified, isLoading } = useClassifieds();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
+    category_id: '',
     subcategory: '',
     price: '',
     location: '',
@@ -24,13 +33,60 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
     images: [] as string[]
   });
 
-  const categories = [
-    { name: 'For Sale', subcategories: ['Electronics', 'Furniture', 'Clothing', 'Books', 'Vehicles', 'Home & Garden', 'Sports & Recreation'] },
-    { name: 'Housing', subcategories: ['Apartments for Rent', 'Houses for Rent', 'Rooms for Rent', 'Real Estate for Sale', 'Roommates'] },
-    { name: 'Jobs', subcategories: ['Full-time', 'Part-time', 'Contract', 'Internships', 'Freelance'] },
-    { name: 'Services', subcategories: ['Home Services', 'Professional Services', 'Tutoring', 'Healthcare', 'Beauty & Wellness', 'Transportation'] },
-    { name: 'Community', subcategories: ['Events', 'Classes', 'Groups', 'Volunteers', 'Lost & Found'] }
-  ];
+  useEffect(() => {
+    console.log('useEffect triggered, isOpen:', isOpen);
+    const fetchCategories = async () => {
+      console.log("[1] Attempting to fetch 'classified' categories...");
+      try {
+        const client = getSupabaseClient();
+        console.log("[2] Supabase client obtained.");
+
+        const query = client.from('categories').select('*').eq('type', 'classified');
+        console.log("[3] Query created. Awaiting response...");
+        console.log("[3.5] Executing query...");
+        const { data, error } = await query;
+        console.log("[4] Query response received.", { data, error });
+        console.log("[4.5] Query processing complete.");
+
+        if (error) {
+          console.error('Error fetching classified categories from Supabase:', error);
+          // Fallback categories if Supabase fetch fails
+          setCategories([
+            { id: 7, name: 'For Sale', subcategories: ['Electronics', 'Vehicles', 'Furniture', 'Books'] },
+            { id: 8, name: 'Housing', subcategories: ['Apartments for Rent', 'Rooms for Rent', 'Houses for Sale'] },
+            { id: 9, name: 'Jobs', subcategories: ['Full-time', 'Part-time', 'Contract'] },
+            { id: 10, name: 'Services', subcategories: ['Tutoring', 'Photography', 'Web Development', 'Home Services'] },
+            { id: 11, name: 'Community', subcategories: null },
+          ]);
+        } else if (data && data.length > 0) {
+          console.log('Successfully fetched classified categories:', data);
+          setCategories(data as Category[]);
+        } else {
+          console.warn('Supabase returned no classified categories. Using fallback data.');
+          setCategories([
+            { id: 7, name: 'For Sale', subcategories: ['Electronics', 'Vehicles', 'Furniture', 'Books'] },
+            { id: 8, name: 'Housing', subcategories: ['Apartments for Rent', 'Rooms for Rent', 'Houses for Sale'] },
+            { id: 9, name: 'Jobs', subcategories: ['Full-time', 'Part-time', 'Contract'] },
+            { id: 10, name: 'Services', subcategories: ['Tutoring', 'Photography', 'Web Development', 'Home Services'] },
+            { id: 11, name: 'Community', subcategories: null },
+          ]);
+        }
+      } catch (err) {
+        console.error('Unexpected error during category fetch:', err);
+        // Fallback categories for any unexpected error
+        setCategories([
+          { id: 7, name: 'For Sale', subcategories: ['Electronics', 'Vehicles', 'Furniture', 'Books'] },
+          { id: 8, name: 'Housing', subcategories: ['Apartments for Rent', 'Rooms for Rent', 'Houses for Sale'] },
+          { id: 9, name: 'Jobs', subcategories: ['Full-time', 'Part-time', 'Contract'] },
+          { id: 10, name: 'Services', subcategories: ['Tutoring', 'Photography', 'Web Development', 'Home Services'] },
+          { id: 11, name: 'Community', subcategories: null },
+        ]);
+      }
+    };
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -69,7 +125,7 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
       await createClassified({
         title: formData.title,
         description: formData.description,
-        category: formData.category,
+        category_id: parseInt(formData.category_id, 10),
         subcategory: formData.subcategory || undefined,
         price: formData.price ? parseFloat(formData.price) : undefined,
         location: formData.location,
@@ -89,7 +145,7 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
         setFormData({
           title: '',
           description: '',
-          category: '',
+          category_id: '',
           subcategory: '',
           price: '',
           location: '',
@@ -193,20 +249,20 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
                     Category *
                   </label>
                   <select
-                    id="category"
-                    name="category"
+                    id="category_id"
+                    name="category_id"
                     required
-                    value={formData.category}
+                    value={formData.category_id}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
                   >
                     <option value="">Select a category</option>
                     {categories.map(cat => (
-                      <option key={cat.name} value={cat.name}>{cat.name}</option>
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -221,12 +277,12 @@ const CreateClassifiedModal: React.FC<CreateClassifiedModalProps> = ({ isOpen, o
                     value={formData.subcategory}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
-                    disabled={!formData.category}
+                    disabled={!formData.category_id}
                   >
                     <option value="">Select a subcategory</option>
-                    {formData.category && categories
-                      .find(cat => cat.name === formData.category)
-                      ?.subcategories.map(subcat => (
+                    {formData.category_id && categories
+                      .find(cat => cat.id === parseInt(formData.category_id, 10))
+                      ?.subcategories?.map(subcat => (
                         <option key={subcat} value={subcat}>{subcat}</option>
                       ))}
                   </select>

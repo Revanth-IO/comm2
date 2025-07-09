@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Users, Heart, Star, MapPin } from 'lucide-react';
+import { Award, Heart, Star, MapPin } from 'lucide-react';
 
 const CommunityHighlights = () => {
   const highlights = [

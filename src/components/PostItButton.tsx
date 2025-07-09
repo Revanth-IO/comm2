@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, PenTool } from 'lucide-react';
+import { PenTool } from 'lucide-react';
 import CreateClassifiedModal from './CreateClassifiedModal';
 
 const PostItButton: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  console.log('isModalOpen:', isModalOpen);
 
   return (
     <>

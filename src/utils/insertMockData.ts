@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 export const insertMockData = async () => {
   try {
@@ -16,10 +16,10 @@ export const insertMockData = async () => {
 
     // 1. Insert Categories (if they don't exist)
     console.log('📂 Inserting categories...');
-    const { data: existingCategories } = await supabase.from('categories').select('id');
+    const { data: existingCategories } = await getSupabaseClient().from('categories').select('id');
     
     if (!existingCategories || existingCategories.length === 0) {
-      const { error: categoriesError } = await supabase.from('categories').insert([
+      const { error: categoriesError } = await getSupabaseClient().from('categories').insert([
         {
           name: 'For Sale',
           type: 'classified',
@@ -240,7 +240,7 @@ export const insertMockData = async () => {
       }
     ];
 
-    const { error: classifiedsError } = await supabase
+    const { error: classifiedsError } = await getSupabaseClient()
       .from('classified_ads')
       .insert(classifiedAds);
 
@@ -340,7 +340,7 @@ export const insertMockData = async () => {
       }
     ];
 
-    const { error: eventsError } = await supabase
+    const { error: eventsError } = await getSupabaseClient()
       .from('events')
       .insert(events);
 
@@ -451,7 +451,7 @@ export const insertMockData = async () => {
       }
     ];
 
-    const { error: businessesError } = await supabase
+    const { error: businessesError } = await getSupabaseClient()
       .from('businesses')
       .insert(businesses);
 
@@ -502,7 +502,7 @@ export const insertMockData = async () => {
       }
     ];
 
-    const { error: feedbackError } = await supabase
+    const { error: feedbackError } = await getSupabaseClient()
       .from('feedback')
       .insert(feedback);
 
@@ -538,19 +538,31 @@ export const clearAllData = async () => {
     console.log('🗑️ Clearing all data...');
     
     // Delete in reverse order of dependencies
-    await supabase.from('business_reviews').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('event_registrations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('content_reviews').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('feedback').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('businesses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('classified_ads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('categories').delete().neq('id', 0);
+    await getSupabaseClient().from('business_reviews').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('event_registrations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('content_reviews').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('feedback').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('businesses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('classified_ads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await getSupabaseClient().from('categories').delete().neq('id', 0);
     
     console.log('✅ All data cleared successfully');
     return { success: true, message: 'All data cleared successfully' };
   } catch (error) {
     console.error('❌ Error clearing data:', error);
+    throw error;
+  }
+};
+
+export const clearUserProfiles = async () => {
+  try {
+    console.log('🗑️ Clearing user profiles...');
+    await getSupabaseClient().from('user_profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    console.log('✅ User profiles cleared successfully');
+    return { success: true, message: 'User profiles cleared successfully' };
+  } catch (error) {
+    console.error('❌ Error clearing user profiles:', error);
     throw error;
   }
 };

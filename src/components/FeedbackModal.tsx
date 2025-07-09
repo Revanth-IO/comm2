@@ -92,25 +92,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
 
     console.log('Feedback submitted:', feedbackData);
 
-    // Simulate sending email to dev team
-    const emailBody = `
-New ${feedbackTypes.find(t => t.id === feedbackType)?.name} from Upkaar Website
-
-From: ${formData.name} (${formData.email})
-Subject: ${formData.subject}
-Priority: ${formData.priority}
-Page: ${formData.page}
-Allow Contact: ${formData.allowContact ? 'Yes' : 'No'}
-
-Message:
-${formData.message}
-
-Technical Details:
-- Browser: ${navigator.userAgent}
-- URL: ${window.location.href}
-- Viewport: ${window.innerWidth}x${window.innerHeight}
-- Timestamp: ${new Date().toLocaleString()}
-    `.trim();
+    
 
     // In production, this would be sent to your backend API
     // which would then email the dev team at dev@upkaar.org

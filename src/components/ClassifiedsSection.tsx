@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X, Loader2 } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Eye, Heart, Share2, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { useClassifieds } from '../hooks/useClassifieds';
 
 const ClassifiedsSection: React.FC = () => {

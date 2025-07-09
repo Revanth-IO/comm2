@@ -11,20 +11,7 @@ const UserMenu: React.FC = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Force re-render when authentication state changes
-  const [renderKey, setRenderKey] = useState(0);
   
-  useEffect(() => {
-    setRenderKey(prev => prev + 1);
-    console.log('👤 UserMenu re-rendered:', { 
-      user: user ? { name: user.name, email: user.email, role: user.role } : null, 
-      isAuthenticated, 
-      userRole: user?.role,
-      canManageRoles: hasPermission('manage_roles'),
-      canApproveContent: hasPermission('approve_content'),
-      renderKey
-    });
-  }, [user, isAuthenticated]);
 
   const handleLogout = async () => {
     console.log('🚪 Logout clicked');
@@ -79,7 +66,7 @@ const UserMenu: React.FC = () => {
   // Show authenticated user menu
   return (
     <>
-      <div className="relative" ref={menuRef} key={renderKey}>
+      <div className="relative" ref={menuRef}>
         <button
           onClick={(e) => {
             e.stopPropagation();

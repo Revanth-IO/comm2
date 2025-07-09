@@ -1,39 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { getSupabaseClient } from '../lib/supabase';
+const supabase = getSupabaseClient();
 
 const FeaturedEvents = () => {
-  const events = [
-    {
-      id: 1,
-      title: 'Diwali Festival Celebration',
-      date: 'October 28, 2024',
-      time: '6:00 PM - 11:00 PM',
-      location: 'Newark, DE',
-      attendees: 500,
-      image: 'https://images.pexels.com/photos/6664189/pexels-photo-6664189.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop',
-      description: 'Join us for the grand Diwali celebration with traditional performances, food, and fireworks.'
-    },
-    {
-      id: 2,
-      title: 'Bollywood Dance Workshop',
-      date: 'November 5, 2024',
-      time: '2:00 PM - 5:00 PM',
-      location: 'Jersey City, NJ',
-      attendees: 50,
-      image: 'https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop',
-      description: 'Learn classical and modern Bollywood dance moves from professional instructors.'
-    },
-    {
-      id: 3,
-      title: 'Indian Entrepreneurs Meet',
-      date: 'November 12, 2024',
-      time: '7:00 PM - 9:00 PM',
-      location: 'Wilmington, DE',
-      attendees: 100,
-      image: 'https://images.pexels.com/photos/3182834/pexels-photo-3182834.jpeg?auto=compress&cs=tinysrgb&w=500&h=300&fit=crop',
-      description: 'Network with successful Indian entrepreneurs and share business insights.'
-    }
-  ];
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .limit(3);
+
+      if (error) {
+        console.error('Error fetching events:', error);
+      } else {
+        setEvents(data);
+      }
+      setLoading(false);
+    };
+
+    fetchEvents();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
 
   return (
     <section id="events" className="py-20 bg-gray-50">
